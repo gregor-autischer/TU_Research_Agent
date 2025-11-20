@@ -52,9 +52,16 @@ const startResizing = () => {
   document.body.style.userSelect = 'none' // Prevent text selection while dragging
 }
 
-const handleMouseMove = (e) => {
+  const handleMouseMove = (e) => {
   if (!isResizing.value) return
   const newWidth = window.innerWidth - e.clientX
+  
+  // Snap to close if less than 100px
+  if (newWidth < 100) {
+    rightSidebarWidth.value = 0
+    return
+  }
+
   // Min width 250px, Max width 800px
   if (newWidth >= 250 && newWidth <= 800) {
     rightSidebarWidth.value = newWidth
@@ -111,7 +118,7 @@ onUnmounted(() => {
 
       <!-- Resizer Handle -->
       <div 
-        class="w-1 hover:w-1.5 bg-slate-200 hover:bg-accent cursor-col-resize transition-all z-20 flex items-center justify-center group"
+        class="w-1 bg-slate-200 hover:bg-accent cursor-col-resize transition-colors z-20 flex items-center justify-center group"
         @mousedown="startResizing"
       >
         <div class="h-8 w-0.5 bg-slate-300 group-hover:bg-white rounded-full"></div>
@@ -119,7 +126,7 @@ onUnmounted(() => {
 
       <!-- Right Column: Sources -->
       <aside 
-        class="border-l border-slate-200 bg-slate-50 flex flex-col shrink-0"
+        class="border-l border-slate-200 bg-slate-50 flex flex-col shrink-0 overflow-hidden"
         :style="{ width: rightSidebarWidth + 'px' }"
       >
         <SidebarRight :sources="sources" />
