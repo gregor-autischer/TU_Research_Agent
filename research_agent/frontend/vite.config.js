@@ -10,11 +10,14 @@ export default defineConfig({
             '@': path.resolve(__dirname, './src'),
         },
     },
-    server: {
-        host: true,
-        port: 5173,
-        watch: {
-            usePolling: true
-        }
+    base: '/static/web_app/',
+    build: {
+        outDir: '../web_app/static/web_app',
+        emptyOutDir: true,
+        rollupOptions: {
+            input: {
+                main: path.resolve(__dirname, 'index.html'),
+            },
+        },
     }
 })

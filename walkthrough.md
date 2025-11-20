@@ -1,20 +1,25 @@
 # Research Agent Project - Walkthrough
 
 ## Overview
-I have successfully scaffolded the Research Agent project with the following stack:
-- **Backend**: Django 5.0 (running on port 8000)
-- **Frontend**: Vue 3 + Tailwind CSS (running on port 5173)
-- **Infrastructure**: Docker Compose
+I have restructured the project into a single Django application that serves the Vue.js frontend.
+- **Single Container**: Django + Node.js (for build) in one Docker container.
+- **Port**: 8009 (mapped to 8009 internally).
+- **Structure**:
+    - `research_agent/`: Django project root.
+    - `research_agent/research_agent`: Django settings & config.
+    - `research_agent/web_app`: Django app (serves frontend).
+    - `research_agent/frontend`: Vue.js source code.
+    - `research_agent/web_app/templates/web_app`: Compiled HTML.
+    - `research_agent/web_app/static/web_app`: Compiled assets.
 
 ## How to Run
 1. Open a terminal in the project root.
-2. Run the following command to build and start the containers:
+2. Run the following command to build and start the container:
    ```bash
    docker-compose up --build
    ```
 3. Access the application:
-   - **Frontend (UI)**: [http://localhost:5173](http://localhost:5173)
-   - **Backend (API)**: [http://localhost:8009](http://localhost:8009)
+   - **App**: [http://localhost:8009](http://localhost:8009)
 
 ## Features Implemented
 ### 3-Column Layout (Light Theme)

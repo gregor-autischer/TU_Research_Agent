@@ -1,24 +1,15 @@
 version: '3.8'
 
 services:
-  backend:
-    build: ./backend
-    command: python manage.py runserver 0.0.0.0:8000
+  web:
+    build: .
+    command: bash entrypoint.sh
     volumes:
-      - ./backend:/app
+      - ./research_agent:/app/research_agent
+      - /app/research_agent/frontend/node_modules
     ports:
-      - "8009:8000"
+      - "8009:8009"
     environment:
       - DEBUG=1
       - SECRET_KEY=dev_secret_key
-      - ALLOWED_HOSTS=localhost,127.0.0.1,backend
-
-  frontend:
-    build: ./frontend
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    ports:
-      - "5173:5173"
-    environment:
-      - CHOKIDAR_USEPOLLING=true
+      - ALLOWED_HOSTS=localhost,127.0.0.1,web
