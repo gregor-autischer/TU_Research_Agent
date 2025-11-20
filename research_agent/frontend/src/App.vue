@@ -3,7 +3,7 @@ import SidebarLeft from './components/SidebarLeft.vue'
 import ChatArea from './components/ChatArea.vue'
 import SidebarRight from './components/SidebarRight.vue'
 import { ref, onUnmounted } from 'vue'
-import { Menu } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
 
 const sources = ref([
   {
@@ -89,8 +89,10 @@ onUnmounted(() => {
       <button 
         @click="toggleLeftSidebar"
         class="p-2 hover:bg-slate-100 rounded-lg mr-3 text-slate-600 transition-colors"
+        :title="isLeftSidebarOpen ? 'Close Sidebar' : 'Open Sidebar'"
       >
-        <Menu class="w-5 h-5" />
+        <ChevronLeft v-if="isLeftSidebarOpen" class="w-5 h-5" />
+        <ChevronRight v-else class="w-5 h-5" />
       </button>
       
       <div class="flex items-center gap-2">
@@ -118,10 +120,11 @@ onUnmounted(() => {
 
       <!-- Resizer Handle -->
       <div 
-        class="w-1 bg-slate-200 hover:bg-accent cursor-col-resize transition-colors z-20 flex items-center justify-center group"
+        class="w-1 cursor-col-resize transition-colors z-20 flex items-center justify-center group"
+        :class="isResizing ? 'bg-accent' : 'bg-slate-200 hover:bg-accent'"
         @mousedown="startResizing"
       >
-        <div class="h-8 w-0.5 bg-slate-300 group-hover:bg-white rounded-full"></div>
+        <div class="h-8 w-0.5 rounded-full transition-colors" :class="isResizing ? 'bg-white' : 'bg-slate-300 group-hover:bg-white'"></div>
       </div>
 
       <!-- Right Column: Sources -->
