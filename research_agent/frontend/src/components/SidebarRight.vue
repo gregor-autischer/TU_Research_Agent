@@ -18,7 +18,7 @@ defineProps({
       <span class="ml-auto text-xs bg-white border border-slate-200 text-slate-500 px-2 py-0.5 rounded-full shadow-sm">{{ sources.length }}</span>
     </div>
 
-    <div class="flex-1 overflow-y-auto p-4 space-y-4">
+    <div class="flex-1 overflow-y-auto bg-white">
       <SourceItem 
         v-for="source in sources" 
         :key="source.id" 

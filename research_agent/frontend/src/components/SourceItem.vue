@@ -19,52 +19,62 @@ const toggleContext = () => {
 </script>
 
 <template>
-  <div class="bg-white border border-slate-200 rounded-lg overflow-hidden hover:border-accent/50 hover:shadow-md transition-all duration-200">
-    <!-- Header -->
-    <div class="p-3">
-      <div class="flex items-start justify-between gap-2 mb-2">
-        <div class="flex items-center gap-2 text-xs font-medium text-accent bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-          <FileText v-if="source.type === 'PDF'" class="w-3 h-3" />
-          <Globe v-else class="w-3 h-3" />
-          {{ source.type }}
+  <div class="group border-b border-slate-100 hover:bg-slate-50 transition-colors">
+  <div class="group border-b border-slate-100 hover:bg-slate-50 transition-colors">
+    <!-- Main Row -->
+    <div class="py-4 px-3 flex items-start gap-3">
+      <!-- Icon -->
+      <div class="mt-0.5 text-slate-400">
+        <FileText v-if="source.type === 'PDF'" class="w-4 h-4" />
+        <Globe v-else class="w-4 h-4" />
+      </div>
+
+      <!-- Content -->
+      <div class="flex-1 min-w-0">
+        <div class="flex items-start justify-between gap-2">
+          <h3 class="font-medium text-slate-800 text-sm leading-tight truncate pr-2" :title="source.title">
+            {{ source.title }}
+          </h3>
+          <span class="text-[10px] text-slate-400 whitespace-nowrap shrink-0">{{ source.date }}</span>
         </div>
-        <div class="text-xs text-slate-400">{{ source.date }}</div>
-      </div>
-      
-      <h3 class="font-medium text-slate-800 text-sm leading-snug mb-1">{{ source.title }}</h3>
-      <p class="text-xs text-slate-500 mb-3">{{ source.authors }}</p>
-
-      <!-- Actions -->
-      <div class="flex items-center justify-between mt-2">
-        <button class="p-1.5 text-slate-400 hover:text-accent hover:bg-blue-50 rounded transition-colors" title="Download">
-          <Download class="w-4 h-4" />
-        </button>
         
-        <!-- Context Toggle -->
-        <button 
-          @click="toggleContext"
-          class="flex items-center gap-2 px-2 py-1 rounded-full text-xs font-medium transition-colors border"
-          :class="inContext ? 'bg-green-50 text-green-600 border-green-200' : 'bg-slate-50 text-slate-400 border-slate-200'"
-        >
-          <div class="w-2 h-2 rounded-full" :class="inContext ? 'bg-green-500' : 'bg-slate-300'"></div>
-          Context
-        </button>
+        <div class="flex items-center justify-between mt-2">
+          <p class="text-xs text-slate-500 truncate max-w-[120px]" :title="source.authors">{{ source.authors }}</p>
+          
+          <div class="flex items-center gap-3">
+            <button class="text-slate-400 hover:text-accent transition-colors" title="Download">
+              <Download class="w-3.5 h-3.5" />
+            </button>
+            
+            <button 
+              @click="toggleContext"
+              class="flex items-center gap-1.5 text-xs font-medium transition-colors"
+              :class="inContext ? 'text-green-600' : 'text-slate-400 hover:text-slate-600'"
+              title="Toggle Context"
+            >
+              <div class="w-2 h-2 rounded-full" :class="inContext ? 'bg-green-500' : 'bg-slate-300'"></div>
+              Context
+            </button>
+
+            <button 
+              @click="isOpen = !isOpen"
+              class="flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <span>Summary</span>
+              <ChevronUp v-if="isOpen" class="w-3.5 h-3.5" />
+              <ChevronDown v-else class="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Summary Toggle -->
-    <button 
-      @click="isOpen = !isOpen"
-      class="w-full flex items-center justify-between px-3 py-2 bg-slate-50 hover:bg-slate-100 text-xs text-slate-500 border-t border-slate-100 transition-colors"
-    >
-      <span>Summary</span>
-      <ChevronUp v-if="isOpen" class="w-3 h-3" />
-      <ChevronDown v-else class="w-3 h-3" />
-    </button>
-
-    <!-- Summary Content -->
-    <div v-if="isOpen" class="p-3 bg-slate-50/50 text-xs text-slate-600 leading-relaxed border-t border-slate-100">
-      {{ source.summary }}
+    <!-- Summary Row -->
+    <div v-if="isOpen" class="px-3 pb-3 pl-10">
+      <div class="text-xs text-slate-600 leading-relaxed bg-slate-50 p-2 rounded border border-slate-100">
+        {{ source.summary }}
+      </div>
     </div>
+  </div>
   </div>
 </template>
