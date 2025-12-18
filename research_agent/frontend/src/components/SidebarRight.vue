@@ -1,8 +1,9 @@
 <script setup>
 import SourceItem from './SourceItem.vue'
-import { Library } from 'lucide-vue-next'
+import { Library, Download } from 'lucide-vue-next'
+import { computed } from 'vue'
 
-defineProps({
+const props = defineProps({
   sources: {
     type: Array,
     required: true
@@ -17,6 +18,29 @@ const handleToggleContext = (id) => {
 
 const handleDelete = (id) => {
   emit('delete-paper', id)
+}
+
+const hasAnyBibtex = computed(() => {
+  return props.sources.some(s => s.bibtex)
+})
+
+const downloadAllBibtex = () => {
+  const bibtexEntries = props.sources
+    .filter(s => s.bibtex)
+    .map(s => s.bibtex)
+    .join('\n\n')
+
+  if (!bibtexEntries) return
+
+  const blob = new Blob([bibtexEntries], { type: 'text/plain' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'references.bib'
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
 }
 </script>
 
@@ -36,6 +60,16 @@ const handleDelete = (id) => {
         @toggle-context="handleToggleContext"
         @delete="handleDelete"
       />
+    </div>
+
+    <div v-if="hasAnyBibtex" class="p-3 border-t border-slate-200 bg-slate-50">
+      <button
+        @click="downloadAllBibtex"
+        class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors text-sm font-medium"
+      >
+        <Download class="w-4 h-4" />
+        Download All BibTeX
+      </button>
     </div>
   </div>
 </template>

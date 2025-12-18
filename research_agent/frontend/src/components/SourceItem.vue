@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { FileText, ChevronDown, ChevronUp, Trash2, Globe, ExternalLink } from 'lucide-vue-next'
+import { FileText, ChevronDown, ChevronUp, Trash2, Globe, ExternalLink, Copy, Check, Loader2 } from 'lucide-vue-next'
 
 const props = defineProps({
   source: {
@@ -12,6 +12,7 @@ const props = defineProps({
 const emit = defineEmits(['toggle-context', 'delete'])
 
 const isOpen = ref(false)
+const copied = ref(false)
 
 const inContext = computed(() => props.source.inContext)
 
@@ -21,6 +22,19 @@ const toggleContext = () => {
 
 const handleDelete = () => {
   emit('delete', props.source.id)
+}
+
+const copyBibtex = async () => {
+  if (!props.source.bibtex) return
+  try {
+    await navigator.clipboard.writeText(props.source.bibtex)
+    copied.value = true
+    setTimeout(() => {
+      copied.value = false
+    }, 2000)
+  } catch (err) {
+    console.error('Failed to copy:', err)
+  }
 }
 </script>
 
@@ -57,6 +71,19 @@ const handleDelete = () => {
             >
               <ExternalLink class="w-3.5 h-3.5" />
             </a>
+
+            <div v-if="source.bibtexLoading" class="text-slate-400" title="Generating BibTeX...">
+              <Loader2 class="w-3.5 h-3.5 animate-spin" />
+            </div>
+            <button
+              v-else-if="source.bibtex"
+              @click="copyBibtex"
+              class="text-slate-400 hover:text-accent transition-colors"
+              :title="copied ? 'Copied!' : 'Copy BibTeX'"
+            >
+              <Check v-if="copied" class="w-3.5 h-3.5 text-green-500" />
+              <Copy v-else class="w-3.5 h-3.5" />
+            </button>
 
             <button
               @click="handleDelete"

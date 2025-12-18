@@ -64,6 +64,7 @@ class Paper(models.Model):
     paper_type = models.CharField(max_length=50, default='PDF')
     link = models.URLField(max_length=1000, blank=True, default='')
     summary = models.TextField()
+    bibtex = models.TextField(blank=True, default='')
     in_context = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

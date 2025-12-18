@@ -130,6 +130,62 @@ def parse_papers_response(content):
         return {"papers": [], "error": "Failed to parse response"}
 
 
+def generate_title(client, model, user_message, assistant_response):
+    """Generate a short title for a conversation based on first exchange."""
+    prompt = f"""Based on this conversation, generate a short, descriptive title (3-6 words max).
+Return ONLY the title text, nothing else.
+
+User: {user_message}
+
+Assistant response summary: {assistant_response[:500] if len(assistant_response) > 500 else assistant_response}"""
+
+    response = client.chat.completions.create(
+        model=model,
+        messages=[
+            {'role': 'system', 'content': 'You generate short, descriptive conversation titles. Return only the title, no quotes or extra text.'},
+            {'role': 'user', 'content': prompt}
+        ],
+        max_completion_tokens=50
+    )
+    title = response.choices[0].message.content.strip()
+    # Remove quotes if present
+    title = title.strip('"\'')
+    # Limit length
+    if len(title) > 100:
+        title = title[:100]
+    return title
+
+
+def generate_bibtex(client, model, paper_data):
+    """Generate BibTeX citation for a paper."""
+    prompt = f"""Generate a proper BibTeX citation for this paper. Return ONLY the BibTeX entry, nothing else.
+
+Title: {paper_data.get('title', '')}
+Authors: {paper_data.get('authors', '')}
+Year: {paper_data.get('date', '')}
+Type: {paper_data.get('type', 'article')}
+URL/Link: {paper_data.get('link', '')}
+
+Use @article for journal papers, @inproceedings for conference papers, @misc for preprints/arXiv.
+Generate a citation key from the first author's last name and year (e.g., smith2024).
+Include all available fields."""
+
+    response = client.chat.completions.create(
+        model=model,
+        messages=[
+            {'role': 'system', 'content': 'You generate accurate BibTeX citations. Return only the BibTeX entry, no explanations.'},
+            {'role': 'user', 'content': prompt}
+        ],
+        max_completion_tokens=500
+    )
+    bibtex = response.choices[0].message.content.strip()
+    # Clean up markdown code blocks if present
+    if bibtex.startswith('```'):
+        bibtex = re.sub(r'^```(?:bibtex)?\n?', '', bibtex)
+        bibtex = re.sub(r'\n?```$', '', bibtex)
+    return bibtex
+
+
 # ============ ENDPOINTS ============
 
 @api_view(['POST'])
@@ -283,6 +339,18 @@ def conversation_chat(request, pk):
             content=json.dumps(papers_data)
         )
 
+        # Generate title after first exchange (2 messages: 1 user + 1 assistant)
+        generated_title = None
+        if conversation.messages.count() == 2 and conversation.title == 'New Conversation':
+            try:
+                assistant_text = papers_data.get('text', str(papers_data))
+                generated_title = generate_title(client, model, message_content, assistant_text)
+                conversation.title = generated_title
+                print(f"[Title Generation] Generated title: {generated_title}")
+            except Exception as e:
+                print(f"[Title Generation] Error: {e}")
+                pass  # Keep default title if generation fails
+
         # Update conversation timestamp
         conversation.save()
 
@@ -298,7 +366,8 @@ def conversation_chat(request, pk):
                 'role': 'assistant',
                 'content': papers_data,
                 'created_at': assistant_message.created_at.isoformat()
-            }
+            },
+            'conversation_title': conversation.title
         })
 
     except ValueError as e:
@@ -325,6 +394,7 @@ def paper_list(request):
                     'type': p.paper_type,
                     'link': p.link,
                     'summary': p.summary,
+                    'bibtex': p.bibtex,
                     'inContext': p.in_context,
                     'created_at': p.created_at.isoformat()
                 }
@@ -344,6 +414,8 @@ def paper_list(request):
         summary=data.get('summary', ''),
         in_context=data.get('inContext', True)
     )
+
+    # Return paper immediately without BibTeX - it will be generated via separate endpoint
     return Response({
         'id': paper.id,
         'title': paper.title,
@@ -352,6 +424,7 @@ def paper_list(request):
         'type': paper.paper_type,
         'link': paper.link,
         'summary': paper.summary,
+        'bibtex': paper.bibtex,
         'inContext': paper.in_context,
         'created_at': paper.created_at.isoformat()
     }, status=201)
@@ -378,9 +451,41 @@ def paper_detail(request, pk):
             'type': paper.paper_type,
             'link': paper.link,
             'summary': paper.summary,
+            'bibtex': paper.bibtex,
             'inContext': paper.in_context
         })
 
     # DELETE
     paper.delete()
     return Response(status=204)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def paper_generate_bibtex(request, pk):
+    """Generate BibTeX citation for a paper."""
+    try:
+        paper = request.user.papers.get(pk=pk)
+    except Paper.DoesNotExist:
+        return Response({'error': 'Paper not found'}, status=404)
+
+    try:
+        client = get_openai_client(request.user)
+        model = DEFAULTS['model']
+        bibtex = generate_bibtex(client, model, {
+            'title': paper.title,
+            'authors': paper.authors,
+            'date': paper.date,
+            'type': paper.paper_type,
+            'link': paper.link
+        })
+        paper.bibtex = bibtex
+        paper.save()
+        print(f"[BibTeX Generation] Generated for paper: {paper.title[:30]}")
+        return Response({
+            'id': paper.id,
+            'bibtex': paper.bibtex
+        })
+    except Exception as e:
+        print(f"[BibTeX Generation] Error: {e}")
+        return Response({'error': f'Failed to generate BibTeX: {str(e)}'}, status=500)

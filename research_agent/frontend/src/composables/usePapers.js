@@ -47,11 +47,39 @@ export function usePapers() {
                 method: 'POST',
                 body: JSON.stringify(paper)
             })
+            // Add paper immediately with loading state for bibtex
+            data.bibtexLoading = true
             papers.value.unshift(data)
+
+            // Generate BibTeX asynchronously
+            generateBibtex(data.id)
+
             return data
         } catch (e) {
             console.error('Failed to add paper:', e)
             throw e
+        }
+    }
+
+    const generateBibtex = async (id) => {
+        try {
+            const data = await apiRequest(`/api/papers/${id}/generate-bibtex/`, {
+                method: 'POST'
+            })
+            // Update paper with generated bibtex
+            const idx = papers.value.findIndex(p => p.id === id)
+            if (idx !== -1) {
+                papers.value[idx].bibtex = data.bibtex
+                papers.value[idx].bibtexLoading = false
+            }
+            return data
+        } catch (e) {
+            console.error('Failed to generate bibtex:', e)
+            // Clear loading state on error
+            const idx = papers.value.findIndex(p => p.id === id)
+            if (idx !== -1) {
+                papers.value[idx].bibtexLoading = false
+            }
         }
     }
 

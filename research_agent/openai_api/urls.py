@@ -23,4 +23,5 @@ urlpatterns = [
     # Paper endpoints
     path('papers/', views.paper_list, name='paper_list'),
     path('papers/<int:pk>/', views.paper_detail, name='paper_detail'),
+    path('papers/<int:pk>/generate-bibtex/', views.paper_generate_bibtex, name='paper_generate_bibtex'),
 ]

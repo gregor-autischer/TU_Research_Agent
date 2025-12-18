@@ -129,15 +129,25 @@ export function useConversations() {
                 newMessages.push(data.assistant_message)
                 currentConversation.value = {
                     ...currentConversation.value,
-                    messages: newMessages
+                    messages: newMessages,
+                    title: data.conversation_title || currentConversation.value.title
                 }
             }
             const idx = conversations.value.findIndex(c => c.id === conversationId)
             if (idx !== -1) {
-                conversations.value[idx].preview = data.assistant_message.content.slice(0, 50)
-                conversations.value[idx].updated_at = new Date().toISOString()
-                const [conv] = conversations.value.splice(idx, 1)
-                conversations.value.unshift(conv)
+                // Create updated conversation object to ensure reactivity
+                const updatedConv = {
+                    ...conversations.value[idx],
+                    preview: data.assistant_message.content.slice(0, 50),
+                    updated_at: new Date().toISOString()
+                }
+                // Update title if it was generated
+                if (data.conversation_title) {
+                    updatedConv.title = data.conversation_title
+                }
+                // Remove from current position and add to front
+                conversations.value.splice(idx, 1)
+                conversations.value.unshift(updatedConv)
             }
             return data
         } catch (e) {
