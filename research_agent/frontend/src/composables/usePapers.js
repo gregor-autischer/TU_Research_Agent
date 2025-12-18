@@ -117,6 +117,10 @@ export function usePapers() {
         }
     }
 
+    const clearPapers = () => {
+        papers.value = []
+    }
+
     return {
         papers: readonly(papers),
         isLoading: readonly(isLoading),
@@ -124,6 +128,7 @@ export function usePapers() {
         addPaper,
         updatePaper,
         deletePaper,
-        toggleContext
+        toggleContext,
+        clearPapers
     }
 }

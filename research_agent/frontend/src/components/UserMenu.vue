@@ -2,15 +2,21 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
+import { useConversations } from '../composables/useConversations'
+import { usePapers } from '../composables/usePapers'
 import { User, Settings, LogOut, ChevronDown, Shield } from 'lucide-vue-next'
 
 const router = useRouter()
 const { user, logout } = useAuth()
+const { clearAll: clearConversations } = useConversations()
+const { clearPapers } = usePapers()
 
 const isOpen = ref(false)
 
 const handleLogout = async () => {
     await logout()
+    clearConversations()
+    clearPapers()
     router.push('/login')
 }
 </script>

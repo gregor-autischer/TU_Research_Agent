@@ -168,6 +168,11 @@ export function useConversations() {
         currentConversation.value = null
     }
 
+    const clearAll = () => {
+        conversations.value = []
+        currentConversation.value = null
+    }
+
     return {
         conversations: readonly(conversations),
         currentConversation: readonly(currentConversation),
@@ -179,6 +184,7 @@ export function useConversations() {
         updateConversationTitle,
         deleteConversation,
         sendMessage,
-        clearCurrentConversation
+        clearCurrentConversation,
+        clearAll
     }
 }
