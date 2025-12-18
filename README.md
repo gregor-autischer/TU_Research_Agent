@@ -5,7 +5,7 @@ A Django + Vue.js research assistant application.
 ## Quick Start
 
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 
 The app will be available at http://localhost:8009
