@@ -1,42 +1,31 @@
 <script setup>
-import { Send, Plus, Bot, User, Loader2 } from 'lucide-vue-next'
+import { Send, Bot, User, Loader2 } from 'lucide-vue-next'
 import { ref } from 'vue'
-import { useApi } from '../composables/useApi'
 
-const emit = defineEmits(['add-source'])
-const { chat } = useApi()
+const props = defineProps({
+    messages: { type: Array, default: () => [] },
+    conversationId: { type: Number, default: null },
+    isLoading: { type: Boolean, default: false }
+})
+
+const emit = defineEmits(['send-message', 'add-source'])
 
 const input = ref('')
-const messages = ref([])
-const isLoading = ref(false)
 
-const sendMessage = async () => {
-  if (!input.value.trim() || isLoading.value) return
-
-  const userMessage = input.value.trim()
-  input.value = ''
-
-  messages.value.push({ role: 'user', content: userMessage })
-
-  isLoading.value = true
-  try {
-    const data = await chat(userMessage)
-    messages.value.push({ role: 'assistant', content: data.response })
-  } catch (error) {
-    messages.value.push({ role: 'assistant', content: `Error: ${error.message}` })
-  } finally {
-    isLoading.value = false
-  }
+const sendMessage = () => {
+    if (!input.value.trim() || props.isLoading) return
+    emit('send-message', input.value.trim())
+    input.value = ''
 }
 
 const addSampleSource = () => {
-  emit('add-source', {
-    title: "GPT-3: Language Models are Few-Shot Learners",
-    authors: "Brown et al.",
-    date: "2020",
-    type: "PDF",
-    summary: "Recent work has demonstrated substantial gains on many NLP tasks and benchmarks by pre-training on a large corpus of text followed by fine-tuning on a specific task. We demonstrate that scaling up language models greatly improves task-agnostic, few-shot performance, sometimes even reaching competitiveness with prior state-of-the-art fine-tuning approaches."
-  })
+    emit('add-source', {
+        title: "GPT-3: Language Models are Few-Shot Learners",
+        authors: "Brown et al.",
+        date: "2020",
+        type: "PDF",
+        summary: "Recent work has demonstrated substantial gains on many NLP tasks and benchmarks by pre-training on a large corpus of text followed by fine-tuning on a specific task. We demonstrate that scaling up language models greatly improves task-agnostic, few-shot performance, sometimes even reaching competitiveness with prior state-of-the-art fine-tuning approaches."
+    })
 }
 </script>
 
@@ -53,7 +42,7 @@ const addSampleSource = () => {
     </div>
 
     <!-- Messages -->
-    <template v-for="(msg, index) in messages" :key="index">
+    <template v-for="(msg, index) in messages" :key="msg.id || index">
       <!-- User Message -->
       <div v-if="msg.role === 'user'" class="flex gap-4 max-w-3xl mx-auto">
         <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center shrink-0">
@@ -98,10 +87,12 @@ const addSampleSource = () => {
         @keydown.enter.prevent="sendMessage"
         placeholder="Ask a research question..."
         class="w-full bg-slate-50 text-slate-800 border border-slate-200 rounded-xl pl-4 pr-12 py-3 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent resize-none h-[52px] max-h-32 scrollbar-hide placeholder:text-slate-400"
+        :disabled="isLoading"
       ></textarea>
-      <button 
+      <button
         @click="sendMessage"
-        class="absolute right-2 top-2 p-1.5 bg-accent hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm"
+        :disabled="isLoading || !input.trim()"
+        class="absolute right-2 top-2 p-1.5 bg-accent hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <Send class="w-4 h-4" />
       </button>

@@ -2,7 +2,7 @@ from django.contrib import admin as django_admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
 from research_agent.admin import admin_site
-from .models import UserProfile
+from .models import UserProfile, Conversation, Message
 
 
 class UserProfileInline(django_admin.StackedInline):
@@ -32,6 +32,25 @@ class UserProfileAdmin(django_admin.ModelAdmin):
     has_api_key.short_description = 'API Key Set'
 
 
+class MessageInline(django_admin.TabularInline):
+    model = Message
+    extra = 0
+    readonly_fields = ('created_at',)
+
+
+class ConversationAdmin(django_admin.ModelAdmin):
+    list_display = ('title', 'user', 'message_count', 'created_at', 'updated_at')
+    list_filter = ('user', 'created_at')
+    search_fields = ('title', 'user__username')
+    readonly_fields = ('created_at', 'updated_at')
+    inlines = [MessageInline]
+
+    def message_count(self, obj):
+        return obj.messages.count()
+    message_count.short_description = 'Messages'
+
+
 # Register with custom admin site
 admin_site.register(User, UserAdmin)
 admin_site.register(UserProfile, UserProfileAdmin)
+admin_site.register(Conversation, ConversationAdmin)

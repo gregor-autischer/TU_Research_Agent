@@ -3,8 +3,53 @@ import SidebarLeft from '../components/SidebarLeft.vue'
 import ChatArea from '../components/ChatArea.vue'
 import SidebarRight from '../components/SidebarRight.vue'
 import UserMenu from '../components/UserMenu.vue'
-import { ref, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { useConversations } from '../composables/useConversations'
+
+const {
+    conversations,
+    currentConversation,
+    isSending,
+    fetchConversations,
+    createConversation,
+    loadConversation,
+    updateConversationTitle,
+    deleteConversation,
+    sendMessage
+} = useConversations()
+
+const messages = computed(() => currentConversation.value?.messages || [])
+const conversationId = computed(() => currentConversation.value?.id || null)
+
+onMounted(() => {
+    fetchConversations()
+})
+
+const handleNewConversation = async () => {
+    await createConversation()
+}
+
+const handleSelectConversation = async (id) => {
+    await loadConversation(id)
+}
+
+const handleRenameConversation = async (id, title) => {
+    await updateConversationTitle(id, title)
+}
+
+const handleDeleteConversation = async (id) => {
+    await deleteConversation(id)
+}
+
+const handleSendMessage = async (message) => {
+    let convId = conversationId.value
+    if (!convId) {
+        const conv = await createConversation()
+        convId = conv.id
+    }
+    await sendMessage(convId, message)
+}
 
 const sources = ref([
     {
@@ -110,13 +155,26 @@ onUnmounted(() => {
             <!-- Left Column: Conversations -->
             <transition name="slide-fade">
                 <aside v-show="isLeftSidebarOpen" class="w-64 border-r border-slate-200 bg-slate-50 flex flex-col shrink-0">
-                    <SidebarLeft />
+                    <SidebarLeft
+                        :conversations="conversations"
+                        :current-conversation-id="conversationId"
+                        @select-conversation="handleSelectConversation"
+                        @new-conversation="handleNewConversation"
+                        @rename-conversation="handleRenameConversation"
+                        @delete-conversation="handleDeleteConversation"
+                    />
                 </aside>
             </transition>
 
             <!-- Center Column: Chat -->
             <section class="flex-1 flex flex-col min-w-0 bg-white relative z-0">
-                <ChatArea @add-source="addSource" />
+                <ChatArea
+                    :messages="messages"
+                    :conversation-id="conversationId"
+                    :is-loading="isSending"
+                    @send-message="handleSendMessage"
+                    @add-source="addSource"
+                />
             </section>
 
             <!-- Resizer Handle -->
