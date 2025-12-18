@@ -2,7 +2,7 @@ from django.contrib import admin as django_admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
 from research_agent.admin import admin_site
-from .models import UserProfile, Conversation, Message
+from .models import UserProfile, Conversation, Message, Paper
 
 
 class UserProfileInline(django_admin.StackedInline):
@@ -50,7 +50,20 @@ class ConversationAdmin(django_admin.ModelAdmin):
     message_count.short_description = 'Messages'
 
 
+class PaperAdmin(django_admin.ModelAdmin):
+    list_display = ('title_short', 'authors', 'date', 'user', 'in_context', 'created_at')
+    list_filter = ('user', 'in_context', 'paper_type', 'created_at')
+    search_fields = ('title', 'authors', 'summary')
+    readonly_fields = ('created_at',)
+    list_editable = ('in_context',)
+
+    def title_short(self, obj):
+        return obj.title[:60] + '...' if len(obj.title) > 60 else obj.title
+    title_short.short_description = 'Title'
+
+
 # Register with custom admin site
 admin_site.register(User, UserAdmin)
 admin_site.register(UserProfile, UserProfileAdmin)
 admin_site.register(Conversation, ConversationAdmin)
+admin_site.register(Paper, PaperAdmin)

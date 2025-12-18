@@ -97,12 +97,13 @@ export function useAuth() {
     const saveApiKey = async (apiKey) => {
         error.value = null
         try {
-            await apiRequest('/api/auth/api-key/', {
+            const data = await apiRequest('/api/auth/api-key/', {
                 method: 'POST',
                 body: JSON.stringify({ api_key: apiKey })
             })
             if (user.value) {
                 user.value.has_api_key = true
+                user.value.api_key_preview = data.api_key_preview
             }
             return true
         } catch (e) {
@@ -117,6 +118,7 @@ export function useAuth() {
             await apiRequest('/api/auth/api-key/delete/', { method: 'DELETE' })
             if (user.value) {
                 user.value.has_api_key = false
+                user.value.api_key_preview = null
             }
             return true
         } catch (e) {

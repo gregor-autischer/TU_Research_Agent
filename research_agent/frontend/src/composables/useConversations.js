@@ -105,7 +105,7 @@ export function useConversations() {
         }
     }
 
-    const sendMessage = async (conversationId, message) => {
+    const sendMessage = async (conversationId, message, settings = {}) => {
         // Optimistically add user message immediately
         const tempUserMessage = { id: `temp-${Date.now()}`, role: 'user', content: message }
         if (currentConversation.value?.id === conversationId) {
@@ -120,7 +120,7 @@ export function useConversations() {
         try {
             const data = await apiRequest(`/api/conversations/${conversationId}/chat/`, {
                 method: 'POST',
-                body: JSON.stringify({ message })
+                body: JSON.stringify({ message, ...settings })
             })
             if (currentConversation.value?.id === conversationId) {
                 // Replace temp message with real one and add assistant message

@@ -2,10 +2,19 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
-import { ArrowLeft, Key, Save, Trash2, Eye, EyeOff, Check } from 'lucide-vue-next'
+import { useSettings, MODEL_OPTIONS, VERBOSITY_OPTIONS, THINKING_LEVEL_OPTIONS } from '../composables/useSettings'
+import { ArrowLeft, Key, Save, Trash2, Eye, EyeOff, Check, Cpu, MessageSquare, Brain } from 'lucide-vue-next'
 
 const router = useRouter()
 const { user, saveApiKey, deleteApiKey, error } = useAuth()
+const {
+    model,
+    verbosity,
+    thinkingLevel,
+    setModel,
+    setVerbosity,
+    setThinkingLevel,
+} = useSettings()
 
 const apiKey = ref('')
 const showApiKey = ref(false)
@@ -38,6 +47,11 @@ const handleDelete = async () => {
     await deleteApiKey()
     isSubmitting.value = false
 }
+
+const formatApiKeyPreview = (key) => {
+    if (!key || key.length < 6) return key
+    return key.substring(0, 6) + '...'
+}
 </script>
 
 <template>
@@ -52,7 +66,7 @@ const handleDelete = async () => {
         </header>
 
         <!-- Content -->
-        <div class="max-w-2xl mx-auto p-6">
+        <div class="max-w-2xl mx-auto p-6 space-y-6">
             <!-- API Key Section -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                 <div class="flex items-center gap-3 mb-4">
@@ -67,9 +81,14 @@ const handleDelete = async () => {
 
                 <!-- Current Status -->
                 <div class="mb-4 p-3 rounded-lg" :class="user?.has_api_key ? 'bg-green-50' : 'bg-amber-50'">
-                    <p class="text-sm" :class="user?.has_api_key ? 'text-green-700' : 'text-amber-700'">
-                        <Check v-if="user?.has_api_key" class="w-4 h-4 inline mr-1" />
-                        {{ user?.has_api_key ? 'API key is configured' : 'No API key configured' }}
+                    <p class="text-sm flex items-center" :class="user?.has_api_key ? 'text-green-700' : 'text-amber-700'">
+                        <Check v-if="user?.has_api_key" class="w-4 h-4 mr-1" />
+                        <template v-if="user?.has_api_key">
+                            API key configured: <span class="font-mono ml-1">{{ formatApiKeyPreview(user?.api_key_preview) }}</span>
+                        </template>
+                        <template v-else>
+                            No API key configured
+                        </template>
                     </p>
                 </div>
 
@@ -116,6 +135,89 @@ const handleDelete = async () => {
                             <Trash2 class="w-4 h-4" />
                             Delete
                         </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Model Settings Section -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <Cpu class="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-semibold text-slate-800">Chat Settings</h2>
+                        <p class="text-sm text-slate-500">Configure model and response preferences</p>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <!-- Model Selection -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">
+                            Model
+                        </label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button
+                                v-for="option in MODEL_OPTIONS"
+                                :key="option.value"
+                                @click="setModel(option.value)"
+                                class="px-4 py-2.5 text-sm font-medium rounded-lg border transition-colors"
+                                :class="model === option.value
+                                    ? 'bg-accent text-white border-accent'
+                                    : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'"
+                            >
+                                {{ option.label }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Verbosity Selection -->
+                    <div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <MessageSquare class="w-4 h-4 text-slate-500" />
+                            <label class="block text-sm font-medium text-slate-700">
+                                Verbosity
+                            </label>
+                        </div>
+                        <p class="text-xs text-slate-500 mb-3">Controls how detailed the responses are</p>
+                        <div class="flex gap-2">
+                            <button
+                                v-for="option in VERBOSITY_OPTIONS"
+                                :key="option.value"
+                                @click="setVerbosity(option.value)"
+                                class="flex-1 px-4 py-2 text-sm font-medium rounded-lg border transition-colors"
+                                :class="verbosity === option.value
+                                    ? 'bg-accent text-white border-accent'
+                                    : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'"
+                            >
+                                {{ option.label }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Thinking Level Selection -->
+                    <div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <Brain class="w-4 h-4 text-slate-500" />
+                            <label class="block text-sm font-medium text-slate-700">
+                                Thinking Level
+                            </label>
+                        </div>
+                        <p class="text-xs text-slate-500 mb-3">Higher levels include more foundational papers and interdisciplinary connections</p>
+                        <div class="flex gap-2">
+                            <button
+                                v-for="option in THINKING_LEVEL_OPTIONS"
+                                :key="option.value"
+                                @click="setThinkingLevel(option.value)"
+                                class="flex-1 px-4 py-2 text-sm font-medium rounded-lg border transition-colors"
+                                :class="thinkingLevel === option.value
+                                    ? 'bg-accent text-white border-accent'
+                                    : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'"
+                            >
+                                {{ option.label }}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

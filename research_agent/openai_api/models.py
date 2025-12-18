@@ -54,3 +54,21 @@ class Message(models.Model):
 
     def __str__(self):
         return f"{self.role}: {self.content[:50]}..."
+
+
+class Paper(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='papers')
+    title = models.CharField(max_length=500)
+    authors = models.CharField(max_length=500)
+    date = models.CharField(max_length=20)
+    paper_type = models.CharField(max_length=50, default='PDF')
+    link = models.URLField(max_length=1000, blank=True, default='')
+    summary = models.TextField()
+    in_context = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.title[:50]}..."

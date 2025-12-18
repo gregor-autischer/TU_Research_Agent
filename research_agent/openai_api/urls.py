@@ -19,4 +19,8 @@ urlpatterns = [
     path('conversations/', views.conversation_list, name='conversation_list'),
     path('conversations/<int:pk>/', views.conversation_detail, name='conversation_detail'),
     path('conversations/<int:pk>/chat/', views.conversation_chat, name='conversation_chat'),
+
+    # Paper endpoints
+    path('papers/', views.paper_list, name='paper_list'),
+    path('papers/<int:pk>/', views.paper_detail, name='paper_detail'),
 ]

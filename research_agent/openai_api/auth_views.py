@@ -6,6 +6,26 @@ from django.contrib.auth.models import User
 from django.views.decorators.csrf import ensure_csrf_cookie
 
 
+def get_api_key_preview(user):
+    """Return first 6 characters of API key for display"""
+    api_key = user.profile.openai_api_key
+    if api_key and len(api_key) >= 6:
+        return api_key[:6]
+    return None
+
+
+def build_user_response(user):
+    """Build user response dict with api key preview"""
+    return {
+        'id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'has_api_key': bool(user.profile.openai_api_key),
+        'api_key_preview': get_api_key_preview(user),
+        'is_staff': user.is_staff
+    }
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 @ensure_csrf_cookie
@@ -37,15 +57,7 @@ def register_view(request):
     user = User.objects.create_user(username=username, email=email, password=password)
     login(request, user)
 
-    return Response({
-        'user': {
-            'id': user.id,
-            'username': user.username,
-            'email': user.email,
-            'has_api_key': bool(user.profile.openai_api_key),
-            'is_staff': user.is_staff
-        }
-    })
+    return Response({'user': build_user_response(user)})
 
 
 @api_view(['POST'])
@@ -59,15 +71,7 @@ def login_view(request):
 
     if user is not None:
         login(request, user)
-        return Response({
-            'user': {
-                'id': user.id,
-                'username': user.username,
-                'email': user.email,
-                'has_api_key': bool(user.profile.openai_api_key),
-                'is_staff': user.is_staff
-            }
-        })
+        return Response({'user': build_user_response(user)})
     else:
         return Response({'error': 'Invalid credentials'}, status=401)
 
@@ -85,15 +89,7 @@ def logout_view(request):
 def get_user(request):
     """Get current user info"""
     if request.user.is_authenticated:
-        return Response({
-            'user': {
-                'id': request.user.id,
-                'username': request.user.username,
-                'email': request.user.email,
-                'has_api_key': bool(request.user.profile.openai_api_key),
-                'is_staff': request.user.is_staff
-            }
-        })
+        return Response({'user': build_user_response(request.user)})
     return Response({'user': None})
 
 
@@ -110,7 +106,11 @@ def save_api_key(request):
     profile.openai_api_key = api_key
     profile.save()
 
-    return Response({'detail': 'API key saved successfully', 'has_api_key': True})
+    return Response({
+        'detail': 'API key saved successfully',
+        'has_api_key': True,
+        'api_key_preview': get_api_key_preview(request.user)
+    })
 
 
 @api_view(['DELETE'])

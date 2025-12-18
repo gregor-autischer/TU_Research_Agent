@@ -8,6 +8,16 @@ defineProps({
     required: true
   }
 })
+
+const emit = defineEmits(['toggle-context', 'delete-paper'])
+
+const handleToggleContext = (id) => {
+  emit('toggle-context', id)
+}
+
+const handleDelete = (id) => {
+  emit('delete-paper', id)
+}
 </script>
 
 <template>
@@ -19,10 +29,12 @@ defineProps({
     </div>
 
     <div class="flex-1 overflow-y-auto bg-white">
-      <SourceItem 
-        v-for="source in sources" 
-        :key="source.id" 
-        :source="source" 
+      <SourceItem
+        v-for="source in sources"
+        :key="source.id"
+        :source="source"
+        @toggle-context="handleToggleContext"
+        @delete="handleDelete"
       />
     </div>
   </div>

@@ -1,6 +1,6 @@
 <script setup>
-import { ref } from 'vue'
-import { FileText, ChevronDown, ChevronUp, Download, Globe } from 'lucide-vue-next'
+import { ref, computed } from 'vue'
+import { FileText, ChevronDown, ChevronUp, Trash2, Globe, ExternalLink } from 'lucide-vue-next'
 
 const props = defineProps({
   source: {
@@ -9,17 +9,22 @@ const props = defineProps({
   }
 })
 
+const emit = defineEmits(['toggle-context', 'delete'])
+
 const isOpen = ref(false)
-const inContext = ref(props.source.inContext)
+
+const inContext = computed(() => props.source.inContext)
 
 const toggleContext = () => {
-  inContext.value = !inContext.value
-  // In a real app, emit event to update parent state
+  emit('toggle-context', props.source.id)
+}
+
+const handleDelete = () => {
+  emit('delete', props.source.id)
 }
 </script>
 
 <template>
-  <div class="group border-b border-slate-100 hover:bg-slate-50 transition-colors">
   <div class="group border-b border-slate-100 hover:bg-slate-50 transition-colors">
     <!-- Main Row -->
     <div class="py-4 px-3 flex items-start gap-3">
@@ -37,16 +42,31 @@ const toggleContext = () => {
           </h3>
           <span class="text-[10px] text-slate-400 whitespace-nowrap shrink-0">{{ source.date }}</span>
         </div>
-        
+
         <div class="flex items-center justify-between mt-2">
           <p class="text-xs text-slate-500 truncate max-w-[120px]" :title="source.authors">{{ source.authors }}</p>
-          
+
           <div class="flex items-center gap-3">
-            <button class="text-slate-400 hover:text-accent transition-colors" title="Download">
-              <Download class="w-3.5 h-3.5" />
+            <a
+              v-if="source.link"
+              :href="source.link"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-slate-400 hover:text-accent transition-colors"
+              title="Open paper"
+            >
+              <ExternalLink class="w-3.5 h-3.5" />
+            </a>
+
+            <button
+              @click="handleDelete"
+              class="text-slate-400 hover:text-red-500 transition-colors"
+              title="Delete"
+            >
+              <Trash2 class="w-3.5 h-3.5" />
             </button>
-            
-            <button 
+
+            <button
               @click="toggleContext"
               class="flex items-center gap-1.5 text-xs font-medium transition-colors"
               :class="inContext ? 'text-green-600' : 'text-slate-400 hover:text-slate-600'"
@@ -56,7 +76,7 @@ const toggleContext = () => {
               Context
             </button>
 
-            <button 
+            <button
               @click="isOpen = !isOpen"
               class="flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-slate-600 transition-colors"
             >
@@ -75,6 +95,5 @@ const toggleContext = () => {
         {{ source.summary }}
       </div>
     </div>
-  </div>
   </div>
 </template>

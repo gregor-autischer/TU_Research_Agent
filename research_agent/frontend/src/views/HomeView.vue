@@ -6,6 +6,8 @@ import UserMenu from '../components/UserMenu.vue'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { useConversations } from '../composables/useConversations'
+import { usePapers } from '../composables/usePapers'
+import { useSettings } from '../composables/useSettings'
 
 const {
     conversations,
@@ -19,11 +21,22 @@ const {
     sendMessage
 } = useConversations()
 
+const {
+    papers,
+    fetchPapers,
+    addPaper,
+    toggleContext,
+    deletePaper
+} = usePapers()
+
+const { getSettings } = useSettings()
+
 const messages = computed(() => currentConversation.value?.messages || [])
 const conversationId = computed(() => currentConversation.value?.id || null)
 
 onMounted(() => {
     fetchConversations()
+    fetchPapers()
 })
 
 const handleNewConversation = async () => {
@@ -48,36 +61,19 @@ const handleSendMessage = async (message) => {
         const conv = await createConversation()
         convId = conv.id
     }
-    await sendMessage(convId, message)
+    await sendMessage(convId, message, getSettings())
 }
 
-const sources = ref([
-    {
-        id: 1,
-        title: "Attention Is All You Need",
-        authors: "Vaswani et al.",
-        date: "2017",
-        type: "PDF",
-        summary: "The dominant sequence transduction models are based on complex recurrent or convolutional neural networks that include an encoder and a decoder. The best performing models also connect the encoder and decoder through an attention mechanism. We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely.",
-        inContext: true
-    },
-    {
-        id: 2,
-        title: "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
-        authors: "Devlin et al.",
-        date: "2018",
-        type: "PDF",
-        summary: "We introduce a new language representation model called BERT, which stands for Bidirectional Encoder Representations from Transformers. Unlike recent language representation models, BERT is designed to pre-train deep bidirectional representations from unlabeled text by jointly conditioning on both left and right context in all layers.",
-        inContext: false
-    }
-])
+const handleAddSource = async (newSource) => {
+    await addPaper(newSource)
+}
 
-const addSource = (newSource) => {
-    sources.value.push({
-        id: Date.now(),
-        ...newSource,
-        inContext: true
-    })
+const handleToggleContext = async (id) => {
+    await toggleContext(id)
+}
+
+const handleDeletePaper = async (id) => {
+    await deletePaper(id)
 }
 
 // Left Sidebar Toggle
@@ -173,7 +169,7 @@ onUnmounted(() => {
                     :conversation-id="conversationId"
                     :is-loading="isSending"
                     @send-message="handleSendMessage"
-                    @add-source="addSource"
+                    @add-source="handleAddSource"
                 />
             </section>
 
@@ -187,7 +183,11 @@ onUnmounted(() => {
             <!-- Right Column: Sources -->
             <aside class="border-l border-slate-200 bg-slate-50 flex flex-col shrink-0 overflow-hidden"
                 :style="{ width: rightSidebarWidth + 'px' }">
-                <SidebarRight :sources="sources" />
+                <SidebarRight
+                    :sources="papers"
+                    @toggle-context="handleToggleContext"
+                    @delete-paper="handleDeletePaper"
+                />
             </aside>
         </main>
     </div>
