@@ -19,5 +19,13 @@ export default defineConfig({
                 main: path.resolve(__dirname, 'index.html'),
             },
         },
+    },
+    server: {
+        proxy: {
+            '/api': {
+                target: 'http://localhost:8009',
+                changeOrigin: true
+            }
+        }
     }
 })
