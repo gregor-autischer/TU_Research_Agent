@@ -1,6 +1,18 @@
 <script setup>
 import { Send, Bot, User, Loader2, FileText, Plus, ChevronDown, ChevronUp, ExternalLink } from 'lucide-vue-next'
 import { ref, nextTick } from 'vue'
+import { marked } from 'marked'
+
+// Configure marked for safe rendering
+marked.setOptions({
+    breaks: true,
+    gfm: true
+})
+
+const renderMarkdown = (text) => {
+    if (!text) return ''
+    return marked.parse(text)
+}
 
 const props = defineProps({
     messages: { type: Array, default: () => [] },
@@ -136,8 +148,7 @@ const isPaperExpanded = (msgId, paperIndex) => {
           <!-- Structured Response (text + papers) -->
           <template v-if="hasStructuredContent(msg.content)">
             <!-- Text Content -->
-            <div v-if="getTextContent(msg.content)" class="text-slate-800 leading-relaxed whitespace-pre-wrap">
-              {{ getTextContent(msg.content) }}
+            <div v-if="getTextContent(msg.content)" class="prose prose-slate max-w-none" v-html="renderMarkdown(getTextContent(msg.content))">
             </div>
 
             <!-- Papers Grid -->
@@ -209,7 +220,7 @@ const isPaperExpanded = (msgId, paperIndex) => {
           </template>
 
           <!-- Plain text fallback -->
-          <div v-else class="text-slate-800 leading-relaxed whitespace-pre-wrap">{{ msg.content }}</div>
+          <div v-else class="prose prose-slate max-w-none" v-html="renderMarkdown(msg.content)"></div>
         </div>
       </div>
     </template>
@@ -229,14 +240,14 @@ const isPaperExpanded = (msgId, paperIndex) => {
 
   <!-- Input Area -->
   <div class="p-4 border-t border-slate-200 bg-white/95 backdrop-blur">
-    <div class="max-w-3xl mx-auto relative">
+    <div class="max-w-3xl mx-auto relative flex items-start">
       <textarea
         ref="textareaRef"
         v-model="input"
         @input="adjustTextareaHeight"
         @keydown.enter.exact.prevent="sendMessage"
         placeholder="Ask a research question..."
-        class="w-full bg-slate-50 text-slate-800 border border-slate-200 rounded-xl pl-4 pr-12 py-3 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent resize-none overflow-y-auto scrollbar-hide placeholder:text-slate-400"
+        class="flex-1 bg-slate-50 text-slate-800 border border-slate-200 rounded-xl pl-4 pr-12 py-3 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent resize-none overflow-y-auto scrollbar-hide placeholder:text-slate-400"
         style="min-height: 52px; max-height: 168px;"
         rows="1"
         :disabled="isLoading"
@@ -244,10 +255,8 @@ const isPaperExpanded = (msgId, paperIndex) => {
       <button
         @click="sendMessage"
         :disabled="isLoading || !input.trim()"
-        :class="[
-          'absolute right-2 p-1.5 bg-accent hover:bg-blue-700 text-white rounded-lg transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed',
-          isMultiLine ? 'top-2' : 'top-1/2 -translate-y-1/2'
-        ]"
+        class="absolute right-2 p-1.5 bg-accent hover:bg-blue-700 text-white rounded-lg transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+        :style="isMultiLine ? 'top: 8px' : 'top: 50%; transform: translateY(-50%)'"
       >
         <Send class="w-4 h-4" />
       </button>

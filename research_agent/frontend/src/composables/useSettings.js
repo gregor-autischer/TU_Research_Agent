@@ -19,7 +19,7 @@ export const THINKING_LEVEL_OPTIONS = [
 ]
 
 // Shared state
-const model = ref('gpt-5')
+const model = ref('gpt-5.2')
 const verbosity = ref('normal')
 const thinkingLevel = ref('medium')
 

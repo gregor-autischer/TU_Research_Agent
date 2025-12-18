@@ -35,7 +35,7 @@ Guidelines:
 """
 
 DEFAULTS = {
-    "model": "gpt-4o",
+    "model": "gpt-5.2",
     "verbosity": "normal",      # minimal | normal | detailed
     "thinking_level": "medium", # low | medium | high
     "web_search": True,

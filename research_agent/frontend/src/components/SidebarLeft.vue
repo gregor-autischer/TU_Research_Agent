@@ -51,6 +51,58 @@ const formatRelativeTime = (dateString) => {
     if (diffHours < 24) return `${diffHours}h`
     return `${diffDays}d`
 }
+
+const decodeUnicode = (str) => {
+    // Decode Unicode escape sequences like \u2019 to actual characters
+    return str.replace(/\\u([0-9a-fA-F]{4})/g, (_, code) =>
+        String.fromCharCode(parseInt(code, 16))
+    )
+}
+
+const getPreviewText = (preview) => {
+    if (!preview) return 'No messages yet'
+
+    let text = null
+
+    // If preview is already an object, extract text
+    if (typeof preview === 'object' && preview !== null) {
+        text = preview.text || null
+    }
+
+    // If it's a string, try to extract text from JSON-like content
+    if (typeof preview === 'string' && !text) {
+        // Try to parse as complete JSON
+        try {
+            const parsed = JSON.parse(preview)
+            if (parsed?.text) text = parsed.text
+        } catch {
+            // Not valid JSON - might be truncated, try regex extraction
+        }
+
+        // Try to extract text value from truncated JSON like {"text": "some text..."
+        if (!text) {
+            const textMatch = preview.match(/"text"\s*:\s*"([^"]*)"?/)
+            if (textMatch) {
+                text = textMatch[1]
+            }
+        }
+
+        // If it starts with { it's likely truncated JSON, don't show it
+        if (!text && preview.trim().startsWith('{')) {
+            return 'No messages yet'
+        }
+
+        // Use the raw preview if nothing else worked
+        if (!text) {
+            text = preview
+        }
+    }
+
+    if (!text) return 'No messages yet'
+
+    // Decode Unicode escape sequences
+    return decodeUnicode(text)
+}
 </script>
 
 <template>
@@ -122,7 +174,7 @@ const formatRelativeTime = (dateString) => {
               </div>
             </template>
           </div>
-          <div v-if="editingId !== conv.id" class="text-xs text-slate-500 truncate">{{ conv.preview || 'No messages yet' }}</div>
+          <div v-if="editingId !== conv.id" class="text-xs text-slate-500 truncate">{{ getPreviewText(conv.preview) }}</div>
         </div>
       </div>
     </div>

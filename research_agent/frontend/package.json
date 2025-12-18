@@ -9,9 +9,11 @@
         "preview": "vite preview"
     },
     "dependencies": {
+        "@tailwindcss/typography": "^0.5.19",
+        "lucide-vue-next": "^0.344.0",
+        "marked": "^17.0.1",
         "vue": "^3.4.0",
-        "vue-router": "^4.2.0",
-        "lucide-vue-next": "^0.344.0"
+        "vue-router": "^4.2.0"
     },
     "devDependencies": {
         "@vitejs/plugin-vue": "^5.0.0",
