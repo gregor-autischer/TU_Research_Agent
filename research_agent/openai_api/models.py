@@ -73,3 +73,20 @@ class Paper(models.Model):
 
     def __str__(self):
         return f"{self.title[:50]}..."
+
+
+class Verification(models.Model):
+    message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='verifications')
+    confidence_score = models.FloatField()  # 0-100
+    paper_ratings = models.JSONField()  # List of paper ratings with details
+    link_verification = models.JSONField()  # List of link check results
+    bibtex_verification = models.JSONField()  # List of bibtex check results
+    hallucination_warnings = models.JSONField()  # List of hallucination warnings
+    summary = models.TextField()  # Human-readable summary
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Verification for message {self.message.id} (Score: {self.confidence_score})"

@@ -24,4 +24,7 @@ urlpatterns = [
     path('papers/', views.paper_list, name='paper_list'),
     path('papers/<int:pk>/', views.paper_detail, name='paper_detail'),
     path('papers/<int:pk>/generate-bibtex/', views.paper_generate_bibtex, name='paper_generate_bibtex'),
+
+    # Verification endpoints
+    path('messages/<int:message_id>/verify/', views.verify_message, name='verify_message'),
 ]

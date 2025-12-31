@@ -1,7 +1,9 @@
 <script setup>
-import { Send, Bot, User, Loader2, FileText, Plus, ChevronDown, ChevronUp, ExternalLink } from 'lucide-vue-next'
+import { Send, Bot, User, Loader2, FileText, Plus, ChevronDown, ChevronUp, ExternalLink, Shield } from 'lucide-vue-next'
 import { ref, nextTick } from 'vue'
 import { marked } from 'marked'
+import { useVerification } from '../composables/useVerification'
+import VerificationResults from './VerificationResults.vue'
 
 // Configure marked for safe rendering
 marked.setOptions({
@@ -26,6 +28,21 @@ const input = ref('')
 const expandedPapers = ref({})
 const textareaRef = ref(null)
 const isMultiLine = ref(false)
+
+// Verification
+const { verifying, verificationError, verifyMessage, getVerification } = useVerification()
+const verifyingMessageId = ref(null)
+
+const handleVerify = async (messageId) => {
+    verifyingMessageId.value = messageId
+    try {
+        await verifyMessage(messageId)
+    } catch (error) {
+        console.error('Verification failed:', error)
+    } finally {
+        verifyingMessageId.value = null
+    }
+}
 
 const adjustTextareaHeight = () => {
     const textarea = textareaRef.value
@@ -143,7 +160,19 @@ const isPaperExpanded = (msgId, paperIndex) => {
           <Bot class="w-5 h-5 text-white" />
         </div>
         <div class="flex-1 space-y-4">
-          <div class="font-medium text-accent">Research Agent</div>
+          <div class="flex items-center justify-between">
+            <div class="font-medium text-accent">Research Agent</div>
+            <button
+              v-if="!getVerification(msg.id)"
+              @click="handleVerify(msg.id)"
+              :disabled="verifyingMessageId === msg.id"
+              class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-accent hover:bg-slate-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Loader2 v-if="verifyingMessageId === msg.id" class="w-3.5 h-3.5 animate-spin" />
+              <Shield v-else class="w-3.5 h-3.5" />
+              <span>{{ verifyingMessageId === msg.id ? 'Verifying...' : 'Verify' }}</span>
+            </button>
+          </div>
 
           <!-- Structured Response (text + papers) -->
           <template v-if="hasStructuredContent(msg.content)">
@@ -221,6 +250,12 @@ const isPaperExpanded = (msgId, paperIndex) => {
 
           <!-- Plain text fallback -->
           <div v-else class="prose prose-slate max-w-none" v-html="renderMarkdown(msg.content)"></div>
+
+          <!-- Verification Results -->
+          <VerificationResults
+            v-if="getVerification(msg.id)"
+            :verification="getVerification(msg.id)"
+          />
         </div>
       </div>
     </template>

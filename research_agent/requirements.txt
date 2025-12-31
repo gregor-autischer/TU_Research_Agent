@@ -2,3 +2,4 @@ Django>=5.0,<6.0
 djangorestframework>=3.14.0
 django-cors-headers>=4.3.1
 openai
+curl-cffi>=0.14.0
