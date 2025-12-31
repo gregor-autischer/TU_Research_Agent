@@ -1,0 +1,32 @@
+# TODO list
+
+## Necessary (part of our presentation)
+
+- Resultvalidation / Verification Layer:
+    - Confidence score for each answer
+    - Possible hallucination warnings
+    - Extract/compute and show the credibility for each suggested paper (if possible) - for some journals there is a value called "Impact factor". Journals with higher impact factor values are considered more prestigious or important within their field.
+    - all of this maybe only on request (via Button) to save ressources
+- Filtered search (restrict to year, authors etc.) with integrated User Interface -> also possible to implement as Prompt Templates
+- Customizable user settings (who am I? student, teacher; what is my knowledge? ...) -> can be used as input in system prompt
+
+## "Bugs"
+
+- Conversation topic should be immediately displayed on the left history tab after first message
+- Wrong links for certain papers, some papers dont even exist, bibtex also not always correct -> this should be avoided but if it happens should be caught by verification layer
+- Summary of some papers with chinese or weird characters ? ![bug_ref_pic](image.png) -> should also be caught by verification layer
+
+
+
+## Nice to have
+
+- Error messages for user (for example missing API key)
+- Streaming with SSE (Each generated token is displayed immediately when available like all common AI-Chatbots do)
+- Title of the project/chat on top of chat
+- Papers in database also uploaded as a vector store in OpenAI and adding the context adds the vector store id to the request and not by adding it in system prompt
+- If verification layer finds errors -> automatically fix them
+
+## To discuss
+
+- Rethink Source Database: My suggestion: database per chat. New functionality to add sources from older projects on demand. 
+    - Reason: For two completely different projects it does not make sense to have the papers of both topics on the right hand side in the database - imagine having 100 research topics - this would be very confusing. I would suggest structuring the papers per chat and then when clicking a button, for example (add paper from old chat) that all chat topics are displayed and for each chat a drop down reveals the papers that were selected for the corresponding chat.
