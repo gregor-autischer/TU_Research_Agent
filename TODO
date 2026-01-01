@@ -9,8 +9,9 @@
     - all of this maybe only on request (via Button) to save ressources
 
         After implementation(pending issues):
-        - Generate bibtex for papers also in verify button and use doi in openalex and verify bibtex
-        - Reduce text length of verification
+        - Generate bibtex for papers also in verify button (if not already existing) and use doi in openalex and verify bibtex
+        - Reduce text length of verification report - make it more user-friendly, reduce information richness (maybe reveal with extra button)
+        - Test the correct incorporation for already exisitng verified papers that might reappear in following requests
 - Filtered search (restrict to year, authors etc.) with integrated User Interface -> also possible to implement as Prompt Templates
 - Customizable user settings (who am I? student, teacher; what is my knowledge? ...) -> can be used as input in system prompt
 
