@@ -1,8 +1,10 @@
 import { ref } from 'vue'
 import { useAuth } from './useAuth'
+import { useSettings } from './useSettings'
 
 export function useVerification() {
     const { getCsrfToken } = useAuth()
+    const { getSettings } = useSettings()
     const verifying = ref(false)
     const verificationError = ref(null)
     const verificationResults = ref({})
@@ -34,8 +36,10 @@ export function useVerification() {
         verificationError.value = null
 
         try {
+            const settings = getSettings()
             const data = await apiRequest(`/api/messages/${messageId}/verify/`, {
-                method: 'POST'
+                method: 'POST',
+                body: JSON.stringify({ model: settings.model })
             })
             verificationResults.value[messageId] = data
             return data

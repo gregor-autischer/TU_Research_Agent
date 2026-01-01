@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import auth_views
+from . import views_verification
 
 urlpatterns = [
     # Auth endpoints
@@ -26,5 +27,5 @@ urlpatterns = [
     path('papers/<int:pk>/generate-bibtex/', views.paper_generate_bibtex, name='paper_generate_bibtex'),
 
     # Verification endpoints
-    path('messages/<int:message_id>/verify/', views.verify_message, name='verify_message'),
+    path('messages/<int:message_id>/verify/', views_verification.verify_message, name='verify_message'),
 ]

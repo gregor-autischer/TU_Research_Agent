@@ -2,7 +2,7 @@ from django.contrib import admin as django_admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
 from research_agent.admin import admin_site
-from .models import UserProfile, Conversation, Message, Paper
+from .models import UserProfile, Conversation, Message, Paper, Verification, PaperVerification
 
 
 class UserProfileInline(django_admin.StackedInline):
@@ -62,8 +62,28 @@ class PaperAdmin(django_admin.ModelAdmin):
     title_short.short_description = 'Title'
 
 
+class PaperVerificationInline(django_admin.TabularInline):
+    model = PaperVerification
+    extra = 0
+    readonly_fields = ('paper_index', 'title', 'credibility_score', 'overall_quality', 'created_at')
+    fields = ('paper_index', 'title', 'credibility_score', 'overall_quality', 'created_at')
+    can_delete = False
+
+
+class VerificationAdmin(django_admin.ModelAdmin):
+    list_display = ('message', 'confidence_score', 'paper_count', 'created_at')
+    list_filter = ('created_at',)
+    readonly_fields = ('message', 'confidence_score', 'textual_verification', 'summary', 'created_at')
+    inlines = [PaperVerificationInline]
+    
+    def paper_count(self, obj):
+        return obj.paper_verification_details.count()
+    paper_count.short_description = 'Papers'
+
+
 # Register with custom admin site
 admin_site.register(User, UserAdmin)
 admin_site.register(UserProfile, UserProfileAdmin)
 admin_site.register(Conversation, ConversationAdmin)
 admin_site.register(Paper, PaperAdmin)
+admin_site.register(Verification, VerificationAdmin)

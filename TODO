@@ -9,11 +9,8 @@
     - all of this maybe only on request (via Button) to save ressources
 
         After implementation(pending issues):
-        - uses default model, but should use current selected model
-        - verficiation layer does not use already created bibtexs but creates them themseelves - do a check before if exists
-        - Not only check format of bibtex but also content
-        - Verifier need the same context the assitant of previous answer had, not only the user message
-        - Does the llm request really need a user prompt? There are two times "You are ..."
+        - Generate bibtex for papers also in verify button and use doi in openalex and verify bibtex
+        - Reduce text length of verification
 - Filtered search (restrict to year, authors etc.) with integrated User Interface -> also possible to implement as Prompt Templates
 - Customizable user settings (who am I? student, teacher; what is my knowledge? ...) -> can be used as input in system prompt
 

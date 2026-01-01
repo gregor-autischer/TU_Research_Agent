@@ -48,6 +48,7 @@ class Message(models.Model):
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+    system_prompt = models.TextField(blank=True, default='')
 
     class Meta:
         ordering = ['created_at']
@@ -75,13 +76,50 @@ class Paper(models.Model):
         return f"{self.title[:50]}..."
 
 
+class PaperVerification(models.Model):
+    """Individual paper verification results."""
+    verification = models.ForeignKey('Verification', on_delete=models.CASCADE, related_name='paper_verification_details')
+    paper_index = models.IntegerField()
+    title = models.CharField(max_length=500)
+    link = models.URLField(max_length=1000, blank=True, default='')
+    claimed_authors = models.CharField(max_length=500, blank=True, default='')
+    claimed_date = models.CharField(max_length=50, blank=True, default='')
+    
+    # OpenAlex metadata
+    openalex_metadata = models.JSONField(null=True, blank=True)
+    verified_metadata = models.JSONField(null=True, blank=True)
+    
+    # Content verification
+    content_fetch = models.JSONField(null=True, blank=True)
+    content_verification = models.JSONField(null=True, blank=True)
+    
+    # Paper quality assessment (from LLM)
+    paper_quality = models.JSONField(null=True, blank=True)
+    
+    # Summary evaluation (from LLM)
+    summary_evaluation = models.JSONField(null=True, blank=True)
+    
+    # Overall assessment
+    overall_assessment = models.TextField(blank=True, default='')
+    
+    # Scores
+    credibility_score = models.FloatField(default=5.0)
+    credibility_notes = models.TextField(blank=True, default='')
+    overall_quality = models.FloatField(default=5.0)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['paper_index']
+
+    def __str__(self):
+        return f"Paper verification for {self.title[:50]}"
+
+
 class Verification(models.Model):
     message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='verifications')
     confidence_score = models.FloatField()  # 0-100
-    paper_ratings = models.JSONField()  # List of paper ratings with details
-    link_verification = models.JSONField()  # List of link check results
-    bibtex_verification = models.JSONField()  # List of bibtex check results
-    hallucination_warnings = models.JSONField()  # List of hallucination warnings
+    textual_verification = models.JSONField()  # Textual response analysis
     summary = models.TextField()  # Human-readable summary
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -90,3 +128,26 @@ class Verification(models.Model):
 
     def __str__(self):
         return f"Verification for message {self.message.id} (Score: {self.confidence_score})"
+    
+    def get_paper_verifications(self):
+        """Helper method to get paper verifications as list of dicts (for API compatibility)."""
+        return [
+            {
+                'paper_index': pv.paper_index,
+                'title': pv.title,
+                'link': pv.link,
+                'claimed_authors': pv.claimed_authors,
+                'claimed_date': pv.claimed_date,
+                'openalex_metadata': pv.openalex_metadata,
+                'verified_metadata': pv.verified_metadata,
+                'content_fetch': pv.content_fetch,
+                'content_verification': pv.content_verification,
+                'paper_quality': pv.paper_quality,
+                'summary_evaluation': pv.summary_evaluation,
+                'overall_assessment': pv.overall_assessment,
+                'credibility_score': pv.credibility_score,
+                'credibility_notes': pv.credibility_notes,
+                'overall_quality': pv.overall_quality,
+            }
+            for pv in self.paper_verification_details.all()
+        ]
