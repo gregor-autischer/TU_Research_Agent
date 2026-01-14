@@ -38,6 +38,69 @@ const isMultiLine = ref(false)
 const autoValidation = ref(true)
 const agentMode = ref(false)
 
+// 5-step agent mode state machine
+const AGENT_PHASES = {
+    IDLE: 'idle',
+    CLARIFYING: 'clarifying',
+    USER_INPUT: 'user_input',
+    RUNNING: 'running',
+    SUMMARY: 'summary'
+}
+const agentPhase = ref(AGENT_PHASES.IDLE)
+const agentStepCount = ref(0)
+const agentConversationId = ref(null)
+const clarificationInput = ref('')
+const collapsedMessages = ref({})  // { messageId: true/false }
+const MAX_AGENT_STEPS = 5
+
+// Computed for backward compatibility
+const isAgentRunning = computed(() => agentPhase.value !== AGENT_PHASES.IDLE)
+
+// Watch agentMode to force autoValidation on
+watch(agentMode, (newVal) => {
+    if (newVal) {
+        autoValidation.value = true
+    }
+})
+
+// Reset agent state when conversation changes
+watch(() => props.conversationId, () => {
+    // Don't reset if this IS the agent conversation
+    if (agentConversationId.value !== props.conversationId) {
+        // We're switching away - don't show agent UI here
+    }
+})
+
+// Computed to check if agent/loading applies to THIS conversation
+const isActiveConversation = computed(() => {
+    return !agentConversationId.value || agentConversationId.value === props.conversationId
+})
+
+const showAgentRunning = computed(() => {
+    return isAgentRunning.value && agentConversationId.value === props.conversationId
+})
+
+// Toggle message collapse
+const toggleMessageCollapse = (msgId) => {
+    collapsedMessages.value[msgId] = !collapsedMessages.value[msgId]
+}
+
+const isMessageCollapsed = (msgId) => {
+    return collapsedMessages.value[msgId] || false
+}
+
+// Computed for input placeholder
+const getInputPlaceholder = computed(() => {
+    if (showAgentRunning.value) {
+        if (agentPhase.value === AGENT_PHASES.CLARIFYING) return 'Preparing questions...'
+        if (agentPhase.value === AGENT_PHASES.RUNNING) return `Agent running... Step ${agentStepCount.value}/${MAX_AGENT_STEPS}`
+        if (agentPhase.value === AGENT_PHASES.SUMMARY) return 'Generating summary...'
+        return 'Agent processing...'
+    }
+    return 'Ask a research question...'
+})
+
+
 // ... filters ...
 
 const showFilters = ref(false)
@@ -74,12 +137,53 @@ const verifyingMessageId = ref(null)
 const handleVerify = async (messageId) => {
     verifyingMessageId.value = messageId
     try {
-        await verifyMessage(messageId)
+        const result = await verifyMessage(messageId)
+        
+        // Collapse this message since next one will arrive
+        if (agentPhase.value === AGENT_PHASES.RUNNING) {
+            collapsedMessages.value[messageId] = true
+        }
+        
+        // If agent mode is running and we haven't hit max steps, auto-continue
+        if (agentPhase.value === AGENT_PHASES.RUNNING && agentStepCount.value < MAX_AGENT_STEPS) {
+            agentStepCount.value++
+            
+            // Get suggestion from verification
+            const suggestion = result?.textual_verification?.next_step_suggestion || 'Please continue the research based on the verification results.'
+            
+            // Auto-send follow-up message
+            emit('send-message', suggestion, { ...filters.value })
+        } else if (agentPhase.value === AGENT_PHASES.RUNNING) {
+            // Max steps reached, transition to SUMMARY phase
+            agentPhase.value = AGENT_PHASES.SUMMARY
+            
+            // Send final summary prompt
+            const summaryPrompt = `Based on all our research steps, please provide a comprehensive final summary that includes:
+1. All the high-quality papers we found throughout this research session
+2. A summary of the key findings and themes
+3. Recommendations for the most important papers to read first
+4. Any gaps in the research that could be explored further
+
+Present this as a final research report.`
+            emit('send-message', summaryPrompt, { ...filters.value })
+        }
     } catch (error) {
         console.error('Verification failed:', error)
+        // Stop agent on error
+        if (agentPhase.value !== AGENT_PHASES.IDLE) {
+            resetAgentState()
+        }
     } finally {
         verifyingMessageId.value = null
     }
+}
+
+// Helper to reset agent state
+const resetAgentState = () => {
+    agentPhase.value = AGENT_PHASES.IDLE
+    agentStepCount.value = 0
+    agentConversationId.value = null
+    clarificationInput.value = ''
 }
 
 // Watch for loading completion to trigger verification
@@ -87,6 +191,19 @@ watch(() => props.isLoading, (newLoading, oldLoading) => {
     if (oldLoading && !newLoading) {
         // Just finished loading
         const lastMessage = props.messages[props.messages.length - 1]
+        
+        // Handle agent phase transitions
+        if (agentPhase.value === AGENT_PHASES.CLARIFYING && lastMessage?.role === 'assistant') {
+            // LLM has asked clarification questions, transition to USER_INPUT
+            agentPhase.value = AGENT_PHASES.USER_INPUT
+            return // Don't verify clarification questions
+        }
+        
+        if (agentPhase.value === AGENT_PHASES.SUMMARY && lastMessage?.role === 'assistant') {
+            // Summary is complete, end agent
+            resetAgentState()
+            return
+        }
         
         // If it's an assistant message with structured content (papers)
         if (lastMessage && lastMessage.role === 'assistant' && hasStructuredContent(lastMessage.content)) {
@@ -151,8 +268,31 @@ const adjustTextareaHeight = () => {
 }
 
 const sendMessage = () => {
-    if (!input.value.trim() || props.isLoading) return
-    emit('send-message', input.value.trim(), { ...filters.value })
+    if (!input.value.trim() || props.isLoading || showAgentRunning.value) return
+    
+    const messageContent = input.value.trim()
+    
+    // Start agent mode if enabled - begin with CLARIFYING phase
+    if (agentMode.value && agentPhase.value === AGENT_PHASES.IDLE) {
+        agentPhase.value = AGENT_PHASES.CLARIFYING
+        agentConversationId.value = props.conversationId
+        
+        // Send clarification prompt
+        const clarificationPrompt = `The user wants to research: "${messageContent}"
+
+Before I start the deep research process, I need to understand their needs better. Please ask 2-3 clarifying questions about:
+1. What specific aspects of this topic are most important to them?
+2. What is their background knowledge level?
+3. Are there any specific applications, time periods, or sub-fields they want to focus on?
+4. What is the purpose of this research (paper, project, learning, etc.)?
+
+Ask these questions conversationally and wait for their response.`
+        
+        emit('send-message', clarificationPrompt, { ...filters.value })
+    } else {
+        emit('send-message', messageContent, { ...filters.value })
+    }
+    
     input.value = ''
     isMultiLine.value = false
     nextTick(() => {
@@ -160,6 +300,29 @@ const sendMessage = () => {
             textareaRef.value.style.height = '52px'
         }
     })
+}
+
+// Handle clarification submission
+const handleClarificationSubmit = () => {
+    if (!clarificationInput.value.trim() || props.isLoading) return
+    
+    // Collapse the clarification question (last message)
+    const lastMessage = props.messages[props.messages.length - 1]
+    if (lastMessage && lastMessage.role === 'assistant') {
+        collapsedMessages.value[lastMessage.id] = true
+    }
+
+    // Transition to RUNNING phase
+    agentPhase.value = AGENT_PHASES.RUNNING
+    agentStepCount.value = 1
+    
+    // Send user's clarification answers with instruction to begin research
+    const researchPrompt = `Here are my answers to your questions: ${clarificationInput.value.trim()}
+
+Now please begin the deep research process. Find relevant high-quality papers and provide detailed analysis.`
+    
+    emit('send-message', researchPrompt, { ...filters.value })
+    clarificationInput.value = ''
 }
 
 const addPaperToSources = (paper) => {
@@ -228,29 +391,29 @@ const isVerificationExpanded = (msgId, paperIndex) => {
 </script>
 
 <template>
-  <!-- Controls Header -->
-  <div class="px-6 py-3 border-b border-slate-100 flex items-center justify-end gap-6 bg-white shrink-0">
-      <!-- Auto Validation -->
-      <label class="flex items-center gap-2 cursor-pointer select-none">
-          <div class="relative">
-             <input type="checkbox" v-model="autoValidation" class="sr-only peer">
-             <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
-          </div>
-          <span class="text-sm font-medium text-slate-600">Auto Validation</span>
-      </label>
-
-      <!-- Agent Mode -->
-      <label class="flex items-center gap-2 cursor-pointer select-none">
-          <div class="relative">
-             <input type="checkbox" v-model="agentMode" class="sr-only peer">
-             <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
-          </div>
-          <span class="text-sm font-medium text-slate-600">Five-step Agent Mode</span>
-      </label>
-  </div>
-
   <!-- Messages Area -->
   <div class="flex-1 overflow-y-auto p-6 space-y-8">
+
+    <!-- Controls Header (scrolls with content) -->
+    <div class="flex items-center justify-end gap-6 max-w-3xl mx-auto pb-4 border-b border-slate-100">
+        <!-- Auto Validation -->
+        <label class="flex items-center gap-2 cursor-pointer select-none">
+            <div class="relative">
+               <input type="checkbox" v-model="autoValidation" class="sr-only peer">
+               <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+            </div>
+            <span class="text-sm font-medium text-slate-600">Auto Validation</span>
+        </label>
+
+        <!-- Agent Mode -->
+        <label class="flex items-center gap-2 cursor-pointer select-none">
+            <div class="relative">
+               <input type="checkbox" v-model="agentMode" class="sr-only peer">
+               <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+            </div>
+            <span class="text-sm font-medium text-slate-600">Five-step Agent Mode</span>
+        </label>
+    </div>
 
     <!-- Empty State -->
     <div v-if="messages.length === 0" class="flex items-center justify-center h-full">
@@ -281,8 +444,19 @@ const isVerificationExpanded = (msgId, paperIndex) => {
         <div class="flex-1 space-y-4">
           <div class="flex items-center justify-between">
             <div class="font-medium text-accent">Research Agent</div>
+            <!-- Collapse Toggle Button -->
+            <button 
+              @click="toggleMessageCollapse(msg.id)"
+              class="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded"
+              :title="isMessageCollapsed(msg.id) ? 'Expand' : 'Collapse'"
+            >
+              <ChevronUp v-if="!isMessageCollapsed(msg.id)" class="w-4 h-4" />
+              <ChevronDown v-else class="w-4 h-4" />
+            </button>
           </div>
 
+          <!-- Collapsible Content -->
+          <div v-show="!isMessageCollapsed(msg.id)">
           <!-- Structured Response (text + papers) -->
           <template v-if="hasStructuredContent(msg.content)">
             <!-- Text Content -->
@@ -423,6 +597,7 @@ const isVerificationExpanded = (msgId, paperIndex) => {
                 Verify Response
             </button>
           </div>
+          </div>  <!-- Close collapsible content -->
         </div>
       </div>
     </template>
@@ -483,8 +658,9 @@ const isVerificationExpanded = (msgId, paperIndex) => {
     </div>
 
     <div class="max-w-3xl mx-auto relative flex items-start gap-2">
-      <!-- Filter Button -->
+      <!-- Filter Button (only show when not in agent phases) -->
       <button 
+        v-if="agentPhase === AGENT_PHASES.IDLE"
         @click="showFilters = !showFilters"
         class="mt-3 p-2 rounded-lg transition-colors relative"
         :class="activeFilterCount > 0 ? 'bg-accent/10 text-accent' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'"
@@ -496,30 +672,67 @@ const isVerificationExpanded = (msgId, paperIndex) => {
         </span>
       </button>
 
-      <textarea
-        ref="textareaRef"
-        v-model="input"
-        @input="adjustTextareaHeight"
-        @keydown.enter.exact.prevent="sendMessage"
-        placeholder="Ask a research question..."
-        class="flex-1 bg-slate-50 text-slate-800 border border-slate-200 rounded-xl pl-4 pr-12 py-3 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent resize-none overflow-y-auto scrollbar-hide placeholder:text-slate-400"
-        style="min-height: 52px; max-height: 168px;"
-        rows="1"
-        :disabled="isLoading"
-      ></textarea>
-      
-      <button
-        @click="sendMessage"
-        :disabled="isLoading || !input.trim()"
-        class="absolute right-2 p-1.5 bg-accent hover:bg-blue-700 text-white rounded-lg transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        :style="isMultiLine ? 'top: 8px' : 'top: 50%; transform: translateY(-50%)'"
-      >
-        <Send class="w-4 h-4" />
-      </button>
+      <!-- Clarification Input (USER_INPUT phase) -->
+      <template v-if="agentPhase === AGENT_PHASES.USER_INPUT && agentConversationId === props.conversationId">
+        <textarea
+          v-model="clarificationInput"
+          @keydown.enter.exact.prevent="handleClarificationSubmit"
+          placeholder="Answer the questions above to guide your research..."
+          class="flex-1 bg-indigo-50 text-slate-800 border-2 border-indigo-300 rounded-xl pl-4 pr-4 py-3 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-none overflow-y-auto scrollbar-hide placeholder:text-slate-400"
+          style="min-height: 72px; max-height: 168px;"
+          rows="2"
+          :disabled="isLoading"
+        ></textarea>
+        <button
+          @click="handleClarificationSubmit"
+          :disabled="isLoading || !clarificationInput.trim()"
+          class="px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          <Send class="w-4 h-4" />
+          Start Research
+        </button>
+      </template>
+
+      <!-- Normal Input (IDLE or not this conversation) -->
+      <template v-else>
+        <textarea
+          ref="textareaRef"
+          v-model="input"
+          @input="adjustTextareaHeight"
+          @keydown.enter.exact.prevent="sendMessage"
+          :placeholder="getInputPlaceholder"
+          class="flex-1 bg-slate-50 text-slate-800 border border-slate-200 rounded-xl pl-4 pr-12 py-3 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent resize-none overflow-y-auto scrollbar-hide placeholder:text-slate-400"
+          style="min-height: 52px; max-height: 168px;"
+          rows="1"
+          :disabled="isLoading || showAgentRunning"
+        ></textarea>
+        
+        <button
+          @click="sendMessage"
+          :disabled="isLoading || showAgentRunning || !input.trim()"
+          class="absolute right-2 p-1.5 bg-accent hover:bg-blue-700 text-white rounded-lg transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          :style="isMultiLine ? 'top: 8px' : 'top: 50%; transform: translateY(-50%)'"
+        >
+          <Send class="w-4 h-4" />
+        </button>
+      </template>
     </div>
-    <div class="text-center text-xs text-slate-400 mt-2">
+    
+    <!-- Agent Mode Indicator -->
+    <div v-if="showAgentRunning" class="text-center text-sm text-indigo-600 font-medium mt-2 flex items-center justify-center gap-2">
+      <Loader2 class="w-4 h-4 animate-spin" />
+      <span v-if="agentPhase === AGENT_PHASES.CLARIFYING">Agent preparing clarification questions...</span>
+      <span v-else-if="agentPhase === AGENT_PHASES.RUNNING">Five-step Agent: Step {{ agentStepCount }} of {{ MAX_AGENT_STEPS }}</span>
+      <span v-else-if="agentPhase === AGENT_PHASES.SUMMARY">Generating final research summary...</span>
+      <span v-else>Agent processing...</span>
+    </div>
+    <div v-else-if="agentPhase === AGENT_PHASES.USER_INPUT && agentConversationId === props.conversationId" class="text-center text-sm text-indigo-600 font-medium mt-2">
+      Please answer the questions above and click "Start Research"
+    </div>
+    <div v-else class="text-center text-xs text-slate-400 mt-2">
       AI can make mistakes. Please verify important information.
     </div>
   </div>
 </template>
+
 

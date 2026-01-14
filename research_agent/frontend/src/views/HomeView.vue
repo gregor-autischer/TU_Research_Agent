@@ -55,13 +55,13 @@ const handleDeleteConversation = async (id) => {
     await deleteConversation(id)
 }
 
-const handleSendMessage = async (message) => {
+const handleSendMessage = async (message, filters = {}) => {
     let convId = conversationId.value
     if (!convId) {
         const conv = await createConversation()
         convId = conv.id
     }
-    await sendMessage(convId, message, getSettings())
+    await sendMessage(convId, message, getSettings(), filters)
 }
 
 const handleAddSource = async (newSource) => {
