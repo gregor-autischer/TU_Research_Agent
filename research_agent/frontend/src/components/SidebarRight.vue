@@ -1,6 +1,7 @@
 <script setup>
 import SourceItem from './SourceItem.vue'
-import { Library, Download } from 'lucide-vue-next'
+import ProjectSelector from './ProjectSelector.vue'
+import { Download } from 'lucide-vue-next'
 import { computed } from 'vue'
 
 const props = defineProps({
@@ -46,10 +47,12 @@ const downloadAllBibtex = () => {
 
 <template>
   <div class="flex flex-col h-full">
-    <div class="p-4 border-b border-slate-200 flex items-center gap-2 bg-slate-50">
-      <Library class="w-5 h-5 text-accent" />
-      <h2 class="font-semibold text-slate-700">Sources Database</h2>
-      <span class="ml-auto text-xs bg-white border border-slate-200 text-slate-500 px-2 py-0.5 rounded-full shadow-sm">{{ sources.length }}</span>
+    <div class="p-3 border-b border-slate-200 bg-slate-50">
+      <ProjectSelector />
+      <div class="flex items-center justify-between mt-3 px-2">
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Sources</span>
+          <span class="text-xs bg-white border border-slate-200 text-slate-500 px-2 py-0.5 rounded-full shadow-sm">{{ sources.length }}</span>
+      </div>
     </div>
 
     <div class="flex-1 overflow-y-auto bg-white">

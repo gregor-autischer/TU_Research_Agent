@@ -125,7 +125,7 @@ onUnmounted(() => {
 <template>
     <div class="flex flex-col h-screen bg-primary text-slate-900 font-sans">
         <!-- Top Bar -->
-        <header class="h-14 border-b border-slate-200 flex items-center justify-between px-4 bg-white shrink-0 z-10">
+        <header class="h-14 border-b border-slate-200 flex items-center justify-between px-4 bg-white shrink-0 z-40">
             <div class="flex items-center">
                 <button @click="toggleLeftSidebar"
                     class="p-2 hover:bg-slate-100 rounded-lg mr-3 text-slate-600 transition-colors"

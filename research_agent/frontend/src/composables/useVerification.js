@@ -2,12 +2,14 @@ import { ref } from 'vue'
 import { useAuth } from './useAuth'
 import { useSettings } from './useSettings'
 
+// Shared state
+const verifying = ref(false)
+const verificationError = ref(null)
+const verificationResults = ref({})
+
 export function useVerification() {
     const { getCsrfToken } = useAuth()
     const { getSettings } = useSettings()
-    const verifying = ref(false)
-    const verificationError = ref(null)
-    const verificationResults = ref({})
 
     async function apiRequest(url, options = {}) {
         const response = await fetch(url, {
@@ -52,6 +54,10 @@ export function useVerification() {
         }
     }
 
+    const setVerification = (messageId, data) => {
+        verificationResults.value[messageId] = data
+    }
+
     const getVerification = (messageId) => {
         return verificationResults.value[messageId] || null
     }
@@ -60,12 +66,18 @@ export function useVerification() {
         delete verificationResults.value[messageId]
     }
 
+    const clearAllVerifications = () => {
+        verificationResults.value = {}
+    }
+
     return {
         verifying,
         verificationError,
         verificationResults,
         verifyMessage,
+        setVerification,
         getVerification,
-        clearVerification
+        clearVerification,
+        clearAllVerifications
     }
 }

@@ -1,11 +1,13 @@
-import { ref, readonly } from 'vue'
+import { ref, readonly, watch } from 'vue'
 import { useAuth } from './useAuth'
+import { useProjects } from './useProjects'
 
 const papers = ref([])
 const isLoading = ref(false)
 
 export function usePapers() {
     const { getCsrfToken } = useAuth()
+    const { currentProject } = useProjects()
 
     async function apiRequest(url, options = {}) {
         const response = await fetch(url, {
@@ -30,9 +32,11 @@ export function usePapers() {
     }
 
     const fetchPapers = async () => {
+        if (!currentProject.value) return
+
         isLoading.value = true
         try {
-            const data = await apiRequest('/api/papers/')
+            const data = await apiRequest(`/api/papers/?project_id=${currentProject.value.id}`)
             papers.value = data.papers
         } catch (e) {
             console.error('Failed to fetch papers:', e)
@@ -41,9 +45,20 @@ export function usePapers() {
         }
     }
 
+    // Watch for project changes
+    watch(currentProject, (newP) => {
+        if (newP) {
+            fetchPapers()
+        } else {
+            papers.value = []
+        }
+    })
+
     const addPaper = async (paper) => {
+        if (!currentProject.value) throw new Error('No project selected')
+
         try {
-            const data = await apiRequest('/api/papers/', {
+            const data = await apiRequest(`/api/papers/?project_id=${currentProject.value.id}`, {
                 method: 'POST',
                 body: JSON.stringify(paper)
             })
@@ -121,6 +136,19 @@ export function usePapers() {
         papers.value = []
     }
 
+    const copyPaperToProject = async (paperId, targetProjectId) => {
+        try {
+            const data = await apiRequest(`/api/papers/${paperId}/copy/`, {
+                method: 'POST',
+                body: JSON.stringify({ target_project_id: targetProjectId })
+            })
+            return data
+        } catch (e) {
+            console.error('Failed to copy paper:', e)
+            throw e
+        }
+    }
+
     return {
         papers: readonly(papers),
         isLoading: readonly(isLoading),
@@ -129,6 +157,7 @@ export function usePapers() {
         updatePaper,
         deletePaper,
         toggleContext,
-        clearPapers
+        clearPapers,
+        copyPaperToProject
     }
 }

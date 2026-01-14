@@ -16,6 +16,10 @@ urlpatterns = [
     # Chat endpoint (legacy, kept for backwards compatibility)
     path('chat/', views.chat, name='chat'),
 
+    # Project endpoints
+    path('projects/', views.project_list, name='project_list'),
+    path('projects/<int:pk>/', views.project_detail, name='project_detail'),
+
     # Conversation endpoints
     path('conversations/', views.conversation_list, name='conversation_list'),
     path('conversations/<int:pk>/', views.conversation_detail, name='conversation_detail'),
@@ -25,6 +29,7 @@ urlpatterns = [
     path('papers/', views.paper_list, name='paper_list'),
     path('papers/<int:pk>/', views.paper_detail, name='paper_detail'),
     path('papers/<int:pk>/generate-bibtex/', views.paper_generate_bibtex, name='paper_generate_bibtex'),
+    path('papers/<int:pk>/copy/', views.copy_paper_to_project, name='copy_paper_to_project'),
 
     # Verification endpoints
     path('messages/<int:message_id>/verify/', views_verification.verify_message, name='verify_message'),

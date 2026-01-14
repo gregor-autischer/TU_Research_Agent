@@ -1,6 +1,8 @@
 <script setup>
-import { ref, computed } from 'vue'
-import { FileText, ChevronDown, ChevronUp, Trash2, Globe, ExternalLink, Copy, Check, Loader2 } from 'lucide-vue-next'
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
+import { FileText, ChevronDown, ChevronUp, Trash2, Globe, ExternalLink, Copy, Check, Loader2, Plus } from 'lucide-vue-next'
+import { useProjects } from '../composables/useProjects'
+import { usePapers } from '../composables/usePapers'
 
 const props = defineProps({
   source: {
@@ -11,10 +13,21 @@ const props = defineProps({
 
 const emit = defineEmits(['toggle-context', 'delete'])
 
+const { projects, currentProject } = useProjects()
+const { copyPaperToProject } = usePapers()
+
 const isOpen = ref(false)
 const copied = ref(false)
+const showCopyMenu = ref(false)
+const isCopying = ref(false)
+const copyMenuRef = ref(null)
 
 const inContext = computed(() => props.source.inContext)
+
+// Filter out current project
+const otherProjects = computed(() => {
+  return projects.value.filter(p => !currentProject.value || p.id !== currentProject.value.id)
+})
 
 const toggleContext = () => {
   emit('toggle-context', props.source.id)
@@ -36,6 +49,34 @@ const copyBibtex = async () => {
     console.error('Failed to copy:', err)
   }
 }
+
+const handleCopy = async (targetProjectId) => {
+  isCopying.value = true
+  try {
+    await copyPaperToProject(props.source.id, targetProjectId)
+    showCopyMenu.value = false
+    // Optional: Show success toast?
+  } catch (e) {
+    console.error("Failed to copy paper:", e)
+  } finally {
+    isCopying.value = false
+  }
+}
+
+// Close menu on outside click
+const handleClickOutside = (e) => {
+  if (showCopyMenu.value && copyMenuRef.value && !copyMenuRef.value.contains(e.target)) {
+    showCopyMenu.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 </script>
 
 <template>
@@ -84,6 +125,32 @@ const copyBibtex = async () => {
               <Check v-if="copied" class="w-3.5 h-3.5 text-green-500" />
               <Copy v-else class="w-3.5 h-3.5" />
             </button>
+
+            <!-- Copy to Project -->
+            <div class="relative" ref="copyMenuRef">
+                <button
+                    @click.stop="showCopyMenu = !showCopyMenu"
+                    class="text-slate-400 hover:text-indigo-600 transition-colors"
+                    title="Add to another project"
+                    :disabled="isCopying"
+                >
+                    <Loader2 v-if="isCopying" class="w-3.5 h-3.5 animate-spin" />
+                    <Plus v-else class="w-3.5 h-3.5" />
+                </button>
+                
+                <div v-if="showCopyMenu" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 border border-slate-200 z-50">
+                    <div class="px-3 py-1 text-xs font-semibold text-slate-500 border-b border-slate-100">Add to Project</div>
+                    <div v-if="otherProjects.length === 0" class="px-3 py-2 text-xs text-slate-400 italic">No other projects</div>
+                    <button
+                        v-for="project in otherProjects"
+                        :key="project.id"
+                        @click="handleCopy(project.id)"
+                        class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 text-truncate"
+                    >
+                        {{ project.name }}
+                    </button>
+                </div>
+            </div>
 
             <button
               @click="handleDelete"

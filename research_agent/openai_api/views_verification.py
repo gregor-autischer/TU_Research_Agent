@@ -440,7 +440,8 @@ Respond ONLY with valid JSON in this exact format:
             "explanation": "<why this is concerning>"
         }}
     ],
-    "summary": "<A comprehensive summary (3-5 sentences) of the evaluation results, highlighting key findings, concerns, and validations>"
+    "summary": "<A comprehensive summary (3-5 sentences) of the evaluation results, highlighting key findings, concerns, and validations>",
+    "next_step_suggestion": "<Specific suggestion for the next research step or question based on these findings. What should the user ask next?>"
 }}
 
 Be thorough and fair. Acknowledge quality where present, but be specific about concerns."""

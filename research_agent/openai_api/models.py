@@ -26,8 +26,20 @@ def save_user_profile(sender, instance, **kwargs):
         instance.profile.save()
 
 
+class Project(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='projects')
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+
 class Conversation(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='conversations')
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='conversations', null=True, blank=True)
     title = models.CharField(max_length=255, default='New Conversation')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -59,6 +71,7 @@ class Message(models.Model):
 
 class Paper(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='papers')
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='papers', null=True, blank=True)
     title = models.CharField(max_length=500)
     authors = models.CharField(max_length=500)
     date = models.CharField(max_length=20)

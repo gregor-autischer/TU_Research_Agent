@@ -12,12 +12,12 @@
         - Generate bibtex for papers also in verify button (if not already existing) and use doi in openalex and verify bibtex
         - Reduce text length of verification report - make it more user-friendly, reduce information richness (maybe reveal with extra button)
         - Test the correct incorporation for already exisitng verified papers that might reappear in following requests
-- Filtered search (restrict to year, authors etc.) with integrated User Interface -> also possible to implement as Prompt Templates
-- Customizable user settings (who am I? student, teacher; what is my knowledge? ...) -> can be used as input in system prompt
+[X] Filtered search (restrict to year, authors etc.) with integrated User Interface -> also possible to implement as Prompt Templates
+[X] Customizable user settings (who am I? student, teacher; what is my knowledge? ...) -> can be used as input in system prompt
 
 ## "Bugs"
 
-- Conversation topic should be immediately displayed on the left history tab after first message
+[X] Conversation topic should be immediately displayed on the left history tab after first message
 - Wrong links for certain papers, some papers dont even exist, bibtex also not always correct -> this should be avoided but if it happens should be caught by verification layer
 - Summary of some papers with chinese or weird characters ? ![bug_ref_pic](image.png) -> should also be caught by verification layer
 
@@ -33,5 +33,5 @@
 
 ## To discuss
 
-- Rethink Source Database: My suggestion: database per chat. New functionality to add sources from older projects on demand. 
+[X] Rethink Source Database: My suggestion: database per chat. New functionality to add sources from older projects on demand. 
     - Reason: For two completely different projects it does not make sense to have the papers of both topics on the right hand side in the database - imagine having 100 research topics - this would be very confusing. I would suggest structuring the papers per chat and then when clicking a button, for example (add paper from old chat) that all chat topics are displayed and for each chat a drop down reveals the papers that were selected for the corresponding chat.
