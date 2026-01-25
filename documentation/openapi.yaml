@@ -1,0 +1,1191 @@
+openapi: 3.0.3
+info:
+  title: TU Research Agent API
+  version: 1.0.0
+  description: Session-based JSON API used between the Vue.js frontend and Django backend.
+servers:
+  - url: http://localhost:8009/api
+    description: Local development
+tags:
+  - name: Auth
+  - name: Chat
+  - name: Projects
+  - name: Conversations
+  - name: Papers
+  - name: Verification
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    csrfToken:
+      type: apiKey
+      in: header
+      name: X-CSRFToken
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      example:
+        error: Invalid project
+    CsrfResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+      example:
+        detail: CSRF cookie set
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+          nullable: true
+        has_api_key:
+          type: boolean
+        api_key_preview:
+          type: string
+          nullable: true
+        is_staff:
+          type: boolean
+    UserEnvelope:
+      type: object
+      properties:
+        user:
+          oneOf:
+            - $ref: '#/components/schemas/User'
+            - type: 'null'
+    AuthRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        email:
+          type: string
+          format: email
+          nullable: true
+    ApiKeyRequest:
+      type: object
+      required:
+        - api_key
+      properties:
+        api_key:
+          type: string
+          description: OpenAI API key to store for the user.
+    ApiKeyResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+        has_api_key:
+          type: boolean
+        api_key_preview:
+          type: string
+          nullable: true
+    Project:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    ProjectCreate:
+      type: object
+      properties:
+        name:
+          type: string
+          default: New Project
+        description:
+          type: string
+          default: ''
+    ProjectUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    ProjectsResponse:
+      type: object
+      properties:
+        projects:
+          type: array
+          items:
+            $ref: '#/components/schemas/Project'
+    ConversationListItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        updated_at:
+          type: string
+          format: date-time
+        preview:
+          type: string
+          description: First 50 characters of the latest message, if any.
+    ConversationSummaryResponse:
+      type: object
+      properties:
+        conversations:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConversationListItem'
+    MessageVerification:
+      type: object
+      properties:
+        id:
+          type: integer
+        confidence_score:
+          type: number
+          format: float
+        textual_verification:
+          $ref: '#/components/schemas/TextualVerification'
+        paper_verifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaperVerification'
+        summary:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    Message:
+      type: object
+      properties:
+        id:
+          type: integer
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+          description: Raw message content. Assistant messages contain serialized papers JSON.
+        created_at:
+          type: string
+          format: date-time
+        verification:
+          $ref: '#/components/schemas/MessageVerification'
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        updated_at:
+          type: string
+          format: date-time
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+    ConversationCreate:
+      type: object
+      properties:
+        title:
+          type: string
+          default: New Conversation
+    ConversationUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+    PaperRecommendation:
+      type: object
+      properties:
+        title:
+          type: string
+        authors:
+          type: string
+        date:
+          type: string
+        type:
+          type: string
+          description: Source type such as PDF.
+        link:
+          type: string
+          format: uri
+        summary:
+          type: string
+    PapersResponse:
+      type: object
+      properties:
+        text:
+          type: string
+          description: Assistant response text.
+        papers:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaperRecommendation'
+        error:
+          type: string
+          description: Present when the LLM response could not be parsed.
+    ChatRequest:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+        model:
+          type: string
+          default: gpt-5.2
+        verbosity:
+          type: string
+          enum: [minimal, normal, detailed]
+          default: normal
+        thinking_level:
+          type: string
+          enum: [low, medium, high]
+          default: medium
+        user_role:
+          type: string
+        user_knowledge:
+          type: string
+        web_search:
+          type: boolean
+          default: true
+        system_prompt:
+          type: string
+        filters:
+          $ref: '#/components/schemas/SearchFilters'
+    ChatResponse:
+      type: object
+      properties:
+        user_message:
+          $ref: '#/components/schemas/Message'
+        assistant_message:
+          type: object
+          properties:
+            id:
+              type: integer
+            role:
+              type: string
+              enum: [assistant]
+            content:
+              $ref: '#/components/schemas/PapersResponse'
+            created_at:
+              type: string
+              format: date-time
+        conversation_title:
+          type: string
+    Paper:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        authors:
+          type: string
+        date:
+          type: string
+        type:
+          type: string
+        link:
+          type: string
+          format: uri
+        summary:
+          type: string
+        bibtex:
+          type: string
+        inContext:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+    PaperCreate:
+      type: object
+      properties:
+        title:
+          type: string
+        authors:
+          type: string
+        date:
+          type: string
+        type:
+          type: string
+          default: PDF
+        link:
+          type: string
+          format: uri
+        summary:
+          type: string
+        inContext:
+          type: boolean
+          default: true
+    PaperUpdate:
+      type: object
+      properties:
+        inContext:
+          type: boolean
+    PaperListResponse:
+      type: object
+      properties:
+        papers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Paper'
+    BibtexResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        bibtex:
+          type: string
+    CopyPaperRequest:
+      type: object
+      required:
+        - target_project_id
+      properties:
+        target_project_id:
+          type: integer
+    CopyPaperResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+    PaperVerification:
+      type: object
+      properties:
+        paper_index:
+          type: integer
+        title:
+          type: string
+        link:
+          type: string
+          format: uri
+        claimed_authors:
+          type: string
+        claimed_date:
+          type: string
+        openalex_metadata:
+          type: object
+          additionalProperties: true
+          nullable: true
+        verified_metadata:
+          type: object
+          additionalProperties: true
+          nullable: true
+        content_fetch:
+          type: object
+          additionalProperties: true
+          nullable: true
+        content_verification:
+          type: object
+          additionalProperties: true
+          nullable: true
+        paper_quality:
+          type: object
+          additionalProperties: true
+          nullable: true
+        summary_evaluation:
+          type: object
+          additionalProperties: true
+          nullable: true
+        overall_assessment:
+          type: string
+        credibility_score:
+          type: number
+          format: float
+        credibility_notes:
+          type: string
+        overall_quality:
+          type: number
+          format: float
+    TextualVerification:
+      type: object
+      properties:
+        confidence_score:
+          type: number
+        response_quality:
+          type: object
+          properties:
+            addresses_question:
+              type: boolean
+            clear_and_helpful:
+              type: boolean
+            follows_instructions:
+              type: boolean
+            score:
+              type: number
+            notes:
+              type: string
+        accuracy_assessment:
+          type: object
+          properties:
+            claims_supported:
+              type: boolean
+            summaries_accurate:
+              type: boolean
+            papers_cited_correctly:
+              type: boolean
+            factual_errors:
+              type: array
+              items:
+                type: string
+            score:
+              type: number
+            notes:
+              type: string
+        paper_assessment:
+          type: object
+          properties:
+            papers_relevant:
+              type: boolean
+            papers_high_quality:
+              type: boolean
+            avg_paper_quality:
+              type: number
+            concerns:
+              type: array
+              items:
+                type: string
+            notes:
+              type: string
+        hallucination_warnings:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              severity:
+                type: string
+                enum: [low, medium, high]
+              description:
+                type: string
+              explanation:
+                type: string
+        summary:
+          type: string
+        next_step_suggestion:
+          type: string
+    Verification:
+      type: object
+      properties:
+        id:
+          type: integer
+        message_id:
+          type: integer
+        confidence_score:
+          type: number
+          format: float
+        textual_verification:
+          $ref: '#/components/schemas/TextualVerification'
+        paper_verifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaperVerification'
+        summary:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    SearchFilters:
+      type: object
+      properties:
+        yearStart:
+          type: string
+        yearEnd:
+          type: string
+        authors:
+          type: string
+        domain:
+          type: string
+paths:
+  /auth/csrf/:
+    get:
+      tags: [Auth]
+      summary: Get CSRF cookie
+      security: []
+      responses:
+        '200':
+          description: CSRF cookie set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrfResponse'
+  /auth/register/:
+    post:
+      tags: [Auth]
+      summary: Register a new user and start a session
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+      responses:
+        '200':
+          description: User created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /auth/login/:
+    post:
+      tags: [Auth]
+      summary: Login with username and password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /auth/logout/:
+    post:
+      tags: [Auth]
+      summary: Logout current session
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      responses:
+        '200':
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '401':
+          description: Not authenticated
+  /auth/user/:
+    get:
+      tags: [Auth]
+      summary: Get current user (if logged in)
+      security: []
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserEnvelope'
+  /auth/api-key/:
+    post:
+      tags: [Auth]
+      summary: Save user's OpenAI API key
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiKeyRequest'
+      responses:
+        '200':
+          description: API key saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKeyResponse'
+        '400':
+          description: Missing API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+  /auth/api-key/delete/:
+    delete:
+      tags: [Auth]
+      summary: Delete stored OpenAI API key
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      responses:
+        '200':
+          description: API key removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                  has_api_key:
+                    type: boolean
+  /chat/:
+    post:
+      tags: [Chat]
+      summary: One-off research chat without project context
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+      responses:
+        '200':
+          description: Assistant response with recommended papers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PapersResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Upstream model error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /projects/:
+    get:
+      tags: [Projects]
+      summary: List projects for the authenticated user
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Projects
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsResponse'
+        '401':
+          description: Not authenticated
+    post:
+      tags: [Projects]
+      summary: Create a new project
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectCreate'
+      responses:
+        '201':
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+  /projects/{projectId}/:
+    parameters:
+      - in: path
+        name: projectId
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Projects]
+      summary: Get a project
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Project details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags: [Projects]
+      summary: Update a project
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectUpdate'
+      responses:
+        '200':
+          description: Updated project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Projects]
+      summary: Delete a project
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /conversations/:
+    get:
+      tags: [Conversations]
+      summary: List conversations for a project
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: project_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Conversations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationSummaryResponse'
+        '400':
+          description: Missing project id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Invalid project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags: [Conversations]
+      summary: Create a conversation within a project
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - in: query
+          name: project_id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationCreate'
+      responses:
+        '201':
+          description: Conversation created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+        '404':
+          description: Invalid project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /conversations/{conversationId}/:
+    parameters:
+      - in: path
+        name: conversationId
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Conversations]
+      summary: Get a conversation with messages
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Conversation detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags: [Conversations]
+      summary: Rename a conversation
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationUpdate'
+      responses:
+        '200':
+          description: Conversation updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Conversations]
+      summary: Delete a conversation
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /conversations/{conversationId}/chat/:
+    post:
+      tags: [Chat]
+      summary: Send a chat message within a conversation (uses project context papers)
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+      responses:
+        '200':
+          description: Conversation exchange
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Conversation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /papers/:
+    get:
+      tags: [Papers]
+      summary: List papers for a project
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: project_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Papers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaperListResponse'
+        '400':
+          description: Missing project id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Invalid project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags: [Papers]
+      summary: Create a paper inside a project
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - in: query
+          name: project_id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaperCreate'
+      responses:
+        '201':
+          description: Paper created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Paper'
+        '404':
+          description: Invalid project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /papers/{paperId}/:
+    parameters:
+      - in: path
+        name: paperId
+        required: true
+        schema:
+          type: integer
+    patch:
+      tags: [Papers]
+      summary: Update paper flags (inContext)
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaperUpdate'
+      responses:
+        '200':
+          description: Paper updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Paper'
+        '404':
+          description: Paper not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Papers]
+      summary: Delete a paper
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          description: Paper not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /papers/{paperId}/generate-bibtex/:
+    post:
+      tags: [Papers]
+      summary: Generate and attach a BibTeX entry for a paper
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - in: path
+          name: paperId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: BibTeX generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BibtexResponse'
+        '404':
+          description: Paper not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Generation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /papers/{paperId}/copy/:
+    post:
+      tags: [Papers]
+      summary: Copy a paper to another project
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - in: path
+          name: paperId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CopyPaperRequest'
+      responses:
+        '201':
+          description: Paper copied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CopyPaperResponse'
+        '400':
+          description: Missing target project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Paper or project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /messages/{messageId}/verify/:
+    post:
+      tags: [Verification]
+      summary: Verify an assistant message for accuracy and hallucinations
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - in: path
+          name: messageId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                model:
+                  type: string
+                  description: Override model used for verification.
+      responses:
+        '200':
+          description: Existing verification reused
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Verification'
+        '201':
+          description: New verification created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Verification'
+        '400':
+          description: Invalid message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Message not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
