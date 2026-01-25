@@ -63,12 +63,17 @@ watch(agentMode, (newVal) => {
     }
 })
 
-// Reset agent state when conversation changes
-watch(() => props.conversationId, () => {
-    // Don't reset if this IS the agent conversation
-    if (agentConversationId.value !== props.conversationId) {
-        // We're switching away - don't show agent UI here
+// Sync agent conversation ID when conversation changes
+watch(() => props.conversationId, (newId, oldId) => {
+    // If agent is running and we just got a conversation ID (new conversation created)
+    if (agentPhase.value !== AGENT_PHASES.IDLE &&
+        agentConversationId.value === null &&
+        newId !== null) {
+        // This is OUR new agent conversation - sync the ID
+        agentConversationId.value = newId
     }
+    // If switching to a different conversation while agent is running elsewhere,
+    // don't reset - the UI conditionals will hide agent controls for this conversation
 })
 
 // Computed to check if agent/loading applies to THIS conversation
